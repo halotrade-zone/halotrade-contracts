@@ -1,0 +1,21 @@
+[package]
+name = "bignumber"
+authors       = { workspace = true }
+version       = { workspace = true }
+edition       = { workspace = true }
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+rust-version  = { workspace = true }
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { workspace = true }
+bigint       = { workspace = true }
+schemars     = { workspace = true }
+serde        = { workspace = true }
+
+[dev-dependencies]
+cosmwasm-schema = { workspace = true }
