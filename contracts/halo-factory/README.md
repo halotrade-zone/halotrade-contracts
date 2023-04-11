@@ -1,6 +1,7 @@
 # The factory contract for Haloswap
 
-The factory contract will handle the information related to pairs.
+## Introduction
+The factory contract will handle the information related to pairs. It will also create new pairs when users provide assets to the contract.
 
 ## InstantiateMsg
 We must provide the source code id of `halo_pair` contract and `halo-token` contract for `halo-factory` contract.
@@ -49,7 +50,12 @@ The parameters in `requirements` include the whitelisted users who can provide l
             "first_asset_minimum": 10000,
             "second_asset_minimum": 20000
         }
-    }
+        "commission_rate": "0.003",
+        "lp_token_info": {
+            "lp_token_name": "AURA_HALO_LP",
+            "lp_token_symbol": "AURA_HALO_LP",
+        }
+    },
 }
 ```
 
@@ -101,7 +107,7 @@ Before can be added to any pair, a native token must be specified its decimals.
     }
 }
 ```
-    
+
 ### Pairs
 ```javascript
 {
@@ -116,4 +122,3 @@ Before can be added to any pair, a native token must be specified its decimals.
         "denom": "uaura",
     },
 }
-    
