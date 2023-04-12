@@ -24,6 +24,10 @@ We must provide the source code id of `halo_pair` contract and `halo-token` cont
     }
 }
 ```
+Where:
+- `owner` is the address of the owner of the factory contract.
+- `token_code_id` is the new source code id of `halo-token` contract.
+- `pair_code_id` is the new source code id of `halo-pair` contract.
 
 ### CreatePair
 The parameters in `requirements` include the whitelisted users who can provide liquidity for the first time when pair is empty and the minimum amount of assets that users must provide in the first time.
@@ -58,6 +62,12 @@ The parameters in `requirements` include the whitelisted users who can provide l
     },
 }
 ```
+Where:
+- `asset_infos` is the information of assets in the pair.
+- `requirements` is the whitelist wallet address list and requirements for providing liquidity for the first time.
+- `commission_rate` is the commission rate of the pair.
+- `lp_token_info` is the information of the LP token.
+
 
 ### AddNativeTokenDecimals
 Before can be added to any pair, a native token must be specified its decimals.
@@ -69,16 +79,9 @@ Before can be added to any pair, a native token must be specified its decimals.
     }
 }
 ```
-
-### MigratePair
-```javascript
-{
-    "migrate_pair" {
-        "contract": "aura...",
-        "code_id": 321
-    }
-}
-```
+Where:
+- `denom` is the denom of the native token.
+- `decimals` is the decimals of the native token will be added.
 
 ## QueryMsg
 ### Config
@@ -87,6 +90,7 @@ Before can be added to any pair, a native token must be specified its decimals.
     "config": {}
 }
 ```
+#[returns(ConfigResponse)]
 
 ### Pair
 ```javascript
@@ -107,6 +111,7 @@ Before can be added to any pair, a native token must be specified its decimals.
     }
 }
 ```
+#[returns(PairInfo)]
 
 ### Pairs
 ```javascript
@@ -114,6 +119,7 @@ Before can be added to any pair, a native token must be specified its decimals.
     "pairs": { }
 }
 ```
+#[returns(PairsResponse)]
 
 ### NativeTokenDecimals
 ```javascript
@@ -122,3 +128,5 @@ Before can be added to any pair, a native token must be specified its decimals.
         "denom": "uaura",
     },
 }
+```
+#[returns(NativeTokenDecimalsResponse)]

@@ -34,41 +34,15 @@ Each contract contains a pair of assets. When users provide these assets to the 
     },
 }
 ```
+Where:
+- `asset_infos` is the list of assets in the pair (The pair can be token<->native, token-token or native-native).
+- `token_code_id` is the source code id of `halo-token` contract.
+- `asset_decimals` is the list of decimals of assets in the pair.
+- `requirements` is the whitelist wallet address list and requirements for providing liquidity for the first time.
+- `commission_rate` is the commission rate of the pair.
+- `lp_token_info` is the information of the LP token.
 
 ## ExecuteMsg
-
-### Receive
-```javascript
-    "receive" {
-        "sender": "aura...",
-        "amount": 10000000000,
-        "msg": {
-            "provide_liquidity": {
-                "assets": [
-                    {
-                        "info": {
-                            "token": {
-                                "contract_addr": "aura...",
-                            }
-                        },
-                        "amount": 10000000000,
-                    },
-                    {
-                        "info": {
-                            "native_token": {
-                                "denom": "uaura"
-                            }
-                        },
-                        "amount": 500000000,
-                    }
-                ],
-                "slippage_tolerance": 5,
-                "receiver": "aura...",
-            },
-        }
-    },
-```
-
 ### ProvideLiquidity
 ```javascript
     "provide_liquidity" {
@@ -94,6 +68,10 @@ Each contract contains a pair of assets. When users provide these assets to the 
         "receiver": "aura...",
     },
 ```
+Where:
+- `assets` is the list of assets that the sender wants to provide to the contract.
+- `slippage_tolerance` is the slippage tolerance of the swap. The value is in percentage.
+- `receiver` is the address of the receiver who will receive the LP Token.
 
 ### Swap
 ```javascript
@@ -111,6 +89,10 @@ Each contract contains a pair of assets. When users provide these assets to the 
         "to": "aura...",
     },
 ```
+Where:
+- `offer_asset` is the asset that the sender wants to swap.
+- `belief_price` is the belief price of the swap.
+- `max_spread` is the maximum spread of the swap.
 
 ## QueryMsg
 ### Pair

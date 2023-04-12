@@ -1,6 +1,6 @@
 # halo-router
 ## Introduction
-The Router Contract contains the logic to facilitate multi-hop swap operations. It is the entry point for all swap operations include.
+The Router Contract contains the logic to facilitate multi-hop swap operations. It is the entry point for all swap operations.
 ## InstantiateMsg
 ```javascript
 {
@@ -9,40 +9,6 @@ The Router Contract contains the logic to facilitate multi-hop swap operations. 
 ```
 
 ## ExecuteMsg
-
-### Receive
-```javascript
-{
-    "receive" {
-        "sender": "aura...",
-        "amount": 10000000000,
-        "msg": {
-            "provide_liquidity": {
-                "assets": [
-                    {
-                        "info": {
-                            "token": {
-                                "contract_addr": "aura...",
-                            }
-                        },
-                        "amount": 10000000000,
-                    },
-                    {
-                        "info": {
-                            "native_token": {
-                                "denom": "uaura"
-                            }
-                        },
-                        "amount": 500000000,
-                    }
-                ],
-                "slippage_tolerance": 5,
-                "receiver": "aura...",
-            },
-        }
-    },
-}
-```
 
 ### ExecuteSwapOperations
 ```javascript
@@ -65,26 +31,11 @@ The Router Contract contains the logic to facilitate multi-hop swap operations. 
     },
 }
 ```
-### ExecuteSwapOperations
-```javascript
-{
-    "execute_swap_operations" {
-        "operations": [
-            "offer_asset_info": {
-                "token": {
-                    "contract_addr": "aura...",
-                }
-            },
-            "ask_asset_info": {
-                "native_token": {
-                    "denom": "uaura"
-                }
-            },
-        ],
-        "to": "aura...",
-    },
-}
-```
+Where:
+- `operations` is the list of swap operations. Each operation contains the offer asset and the ask asset. The offer asset is the asset that the user wants to swap. The ask asset is the asset that the user wants to receive.
+- `minimum_receive` is the minimum amount of the ask asset that the user wants to receive. If the amount of the ask asset is less than the minimum amount, the swap operation will fail.
+- `to` is the address that the user wants to receive the ask asset.
+
 ### AssertMinimumReceive
 ```javascript
 {
@@ -100,6 +51,11 @@ The Router Contract contains the logic to facilitate multi-hop swap operations. 
     },
 }
 ```
+Where:
+- `asset_info` is the asset that the user wants to receive. It can be a token or a native token.
+- `prev_balance` is the balance of the asset before the swap operation.
+- `minimum_receive` is the minimum amount of the asset that the user wants to receive.
+- `receiver` is the address to receive the asset.
 
 ## QueryMsg
 ### Config
