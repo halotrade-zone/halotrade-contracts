@@ -12,12 +12,12 @@ The automated market-maker on [Aura](https://aura.network/) network.
 
 ## Contracts
 
-|                  Name                    |                        Description                         |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| [`halo_factory`](contracts/halo_factory) |                                                            |
-| [`halo_pair`](contracts/halo_pair)       |                                                            |
-| [`halo_router`](contracts/halo_router)   |                                                            |
-| [`halo_token`](contracts/halo_token)     | CW20 (ERC20 equivalent) token implementation for LP tokens |
+|                  Name                    |                        Description                           |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| [`halo_factory`](contracts/halo_factory) | Handle the information related to pairs                      |
+| [`halo_pair`](contracts/halo_pair)       | Containing a pair of assets                                  |
+| [`halo_router`](contracts/halo_router)   | Containing the logic to facilitate multi-hop swap operations |
+| [`halo_token`](contracts/halo_token)     | CW20 (ERC20 equivalent) token implementation for LP tokens   |
 
 * halo_router
 
@@ -55,7 +55,7 @@ beaker wasm build
 ```
 with the optimizer is
 ```toml
-optimizer_version = '0.12.9'
+optimizer_version = '0.12.11'
 ```
 
 Build .wasm file stored in `target/wasm32-unknown-unknown/release/<CONTRACT_NAME>.wasm`
