@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::contract::*;
-    use crate::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2, USER_1};
+    use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2, USER_1};
     use bignumber::Decimal256;
     use cosmwasm_std::{
         coins, from_binary,
@@ -44,119 +44,7 @@ mod tests {
     const MOCK_OFFER_NFT_OFFERER_INSUFFICIENT_BALANCE: &str = "offerer 2";
     const MOCK_OFFER_NFT_OFFERER_INSUFFICIENT_ALLOWANCE: &str = "offerer 3";
 
-    fn mock_deps() -> OwnedDeps<MemoryStorage, MockApi, MockQuerier> {
-        let mut deps = mock_dependencies();
-        let msg = InstantiateMsg {
-            name: MOCK_TOKEN_A_NAME.to_string(),
-            symbol: MOCK_TOKEN_A_SYMBOL.to_string(),
-            decimals: 6,
-            initial_balances: vec![],
-            mint: Some(MinterResponse {
-                minter: ADMIN.to_string(),
-                cap: Some(Uint128::new(MOCK_1000_TOKEN_A_AMOUNT)),
-            }),
-        };
 
-        // mock querier
-        deps.querier.update_wasm(|query| {
-            match query {
-                WasmQuery::Smart { contract_addr, msg } => match contract_addr.as_str() {
-                    MOCK_HALO_TOKEN_ADDR => {
-                        let query_msg = from_binary::<Cw20QueryMsg>(msg).unwrap();
-                        match query_msg {
-                            Cw20QueryMsg::Balance { address, .. } => {
-                                if address == MOCK_OFFER_NFT_OFFERER_INSUFFICIENT_BALANCE {
-                                    let result = ContractResult::Ok(
-                                        to_binary(&cw20::BalanceResponse {
-                                            balance: Uint128::from(MOCK_OFFER_CW20_AMOUNT_MINIMUM),
-                                        })
-                                        .unwrap(),
-                                    );
-                                    cosmwasm_std::SystemResult::Ok(result)
-                                } else {
-                                    let result = ContractResult::Ok(
-                                        to_binary(&cw20::BalanceResponse {
-                                            balance: Uint128::from(MOCK_OFFER_CW20_AMOUNT),
-                                        })
-                                        .unwrap(),
-                                    );
-                                    cosmwasm_std::SystemResult::Ok(result)
-                                }
-                            }
-                            Cw20QueryMsg::Allowance { owner, spender: _ } => {
-                                if owner == MOCK_OFFER_NFT_OFFERER_INSUFFICIENT_ALLOWANCE {
-                                    let result = ContractResult::Ok(
-                                        to_binary(&cw20::AllowanceResponse {
-                                            allowance: Uint128::from(
-                                                MOCK_OFFER_CW20_AMOUNT_MINIMUM,
-                                            ),
-                                            expires: Cw20Expiration::Never {},
-                                        })
-                                        .unwrap(),
-                                    );
-                                    cosmwasm_std::SystemResult::Ok(result)
-                                } else {
-                                    let result = ContractResult::Ok(
-                                        to_binary(&cw20::AllowanceResponse {
-                                            allowance: Uint128::from(MOCK_OFFER_CW20_AMOUNT),
-                                            expires: Cw20Expiration::Never {},
-                                        })
-                                        .unwrap(),
-                                    );
-                                    cosmwasm_std::SystemResult::Ok(result)
-                                }
-                            }
-                            _ => {
-                                let result = ContractResult::Err("Not Found".to_string());
-                                cosmwasm_std::SystemResult::Ok(result)
-                            }
-                        }
-                    }
-                    _ => {
-                        panic!("Unexpected contract address: {}", contract_addr);
-                    }
-                },
-                _ => panic!("Unexpected query"),
-            }
-            // mock query royalty info
-        });
-        let res = instantiate_contract(deps.as_mut(), msg).unwrap();
-        assert_eq!(0, res.messages.len());
-        deps
-    }
-
-    // we will instantiate a contract with account "owner" but admin is "owner"
-    fn instantiate_contract(deps: DepsMut, msg: InstantiateMsg) -> Result<Response, ContractError> {
-        let info = mock_info("owner", &coins(1000, "uaura"));
-        instantiate(deps, mock_env(), info, msg)
-    }
-
-    #[test]
-    fn proper_initialization() {
-        let deps = mock_deps();
-        // query config
-        let res = query(deps.as_ref(), mock_env(), Cw20QueryMsg::TokenInfo {}).unwrap();
-        let token_info: TokenInfoResponse = from_binary(&res).unwrap();
-
-        assert_eq!(MOCK_TOKEN_A_NAME.to_string(), token_info.name);
-        assert_eq!(MOCK_TOKEN_A_SYMBOL.to_string(), token_info.symbol);
-        assert_eq!(6, token_info.decimals);
-        assert_eq!(Uint128::from(0u128), token_info.total_supply);
-    }
-
-    #[test]
-    fn proper_initialization_with_no_minter_data() {
-        let msg = InstantiateMsg {
-            name: "Cafe Token".to_string(),
-            symbol: "CAFE".to_string(),
-            decimals: 6,
-            initial_balances: vec![],
-            mint: None, // no minter data
-        };
-        let mut deps = mock_deps();
-        let res = instantiate_contract(deps.as_mut(), msg);
-        assert!(res.is_ok());
-    }
 
     // This module to verify Native Token works with cw20-token
     // USER_1 Mint 1000 tokens to TKA
@@ -312,8 +200,8 @@ mod tests {
                 },
                 commission_rate: Some(Decimal256::from_str("0.03").unwrap()),
                 lp_token_info: LPTokenInfo {
-                    lp_token_name: "utaura_HALO_LP".to_string(),
-                    lp_token_symbol: "utaura_HALO_LP".to_string(),
+                    lp_token_name: "aura-HALO".to_string(),
+                    lp_token_symbol: "aura-HALO".to_string(),
                 },
             };
 
@@ -382,8 +270,8 @@ mod tests {
             assert_eq!(
                 response,
                 TokenInfoResponse {
-                    name: "utaura_HALO_LP".to_string(),
-                    symbol: "utaura_HALO_LP".to_string(),
+                    name: "aura-HALO".to_string(),
+                    symbol: "aura-HALO".to_string(),
                     decimals: 6u8,
                     total_supply: Uint128::zero(),
                 }

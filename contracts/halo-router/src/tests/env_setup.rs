@@ -14,12 +14,12 @@ pub mod env {
         reply as HaloPairReply,
     };
 
-    use halo_router::contract::{
+    use crate::contract::{
         execute as HaloRouterExecute, instantiate as HaloRouterInstantiate,
         query as HaloRouterQuery,
     };
 
-    use crate::contract::{
+    use cw20_base::contract::{
         execute as HaloTokenExecute, instantiate as HaloTokenInstantiate, query as HaloTokenQuery,
     };
 
@@ -335,7 +335,7 @@ pub mod env {
 
         assert_eq!(
             err.source().unwrap().to_string(),
-            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\_]{3,20}")
+            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\-]{3,12}")
                 .to_string()
         );
 
@@ -352,7 +352,7 @@ pub mod env {
 
         assert_eq!(
             err.source().unwrap().to_string(),
-            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\_]{3,20}")
+            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\-]{3,12}")
                 .to_string()
         );
 
