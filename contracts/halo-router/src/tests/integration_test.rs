@@ -1,50 +1,24 @@
 #[cfg(test)]
 mod tests {
-    use crate::contract::*;
     use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2, USER_1};
     use bignumber::Decimal256;
     use cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-        to_binary, Addr, BalanceResponse as BankBalanceResponse, BankQuery, Coin, ContractResult,
-        DepsMut, MemoryStorage, OwnedDeps, QueryRequest, Response, Uint128, WasmQuery,
+        from_binary, to_binary, Addr, BalanceResponse as BankBalanceResponse, BankQuery, Coin,
+        QueryRequest, Uint128,
     };
-    use cw20::{BalanceResponse, Expiration as Cw20Expiration, MinterResponse, TokenInfoResponse};
-    use cw20_base::{
-        msg::ExecuteMsg as Cw20ExecuteMsg, msg::QueryMsg as Cw20QueryMsg, ContractError,
-    };
+    use cw20::{BalanceResponse, TokenInfoResponse};
+    use cw20_base::{msg::ExecuteMsg as Cw20ExecuteMsg, msg::QueryMsg as Cw20QueryMsg};
     use haloswap::asset::{AssetInfo, CreatePairRequirements, PairInfo};
     use haloswap::factory::{
         ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
     };
-    // use haloswap::pair::{InstantiateMsg as Pair,InstantiateMsg, MigrateMsg as PairMigrateMsg};
+
     use haloswap::pair::Cw20HookMsg;
-    use haloswap::token::InstantiateMsg;
-
-    // const MOCK_HALO_FACTORY_ADDR: &str = "halo_factory_addr";
-    // const MOCK_HALO_PAIR_ADDR: &str = "halo_pair_addr";
-    // const MOCK_HALO_ROUTER_ADDR: &str = "halo_router_addr";
-    const MOCK_HALO_TOKEN_ADDR: &str = "halo_token_addr";
-
-    const MOCK_OFFER_CW20_AMOUNT: u128 = 1_000_000_000;
     // Mock information for CW20 token contract
     const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
     // Mock information for native token
     const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
     const MOCK_TRANSACTION_FEE: u128 = 5000;
-    // Mock information for token A
-    const MOCK_1000_TOKEN_A_AMOUNT: u128 = 1_000_000_000;
-    const MOCK_TOKEN_A_NAME: &str = "Token A";
-    const MOCK_TOKEN_A_SYMBOL: &str = "TKA";
-
-    // Mock information for LPToken: uaura + HALO
-    // const MOCK_LP_UAURA_HALO_TOKEN_SYMBOL: &str = "LP-UAURA-HALO";
-
-    const MOCK_OFFER_CW20_AMOUNT_MINIMUM: u128 = 1;
-    const MOCK_OFFER_NFT_OFFERER_INSUFFICIENT_BALANCE: &str = "offerer 2";
-    const MOCK_OFFER_NFT_OFFERER_INSUFFICIENT_ALLOWANCE: &str = "offerer 3";
-
-
 
     // This module to verify Native Token works with cw20-token
     // USER_1 Mint 1000 tokens to TKA
