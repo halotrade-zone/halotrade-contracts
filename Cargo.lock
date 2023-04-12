@@ -358,24 +358,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw20-base"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f79314264ffc46b7658ee30caccc1540f14b9119568264bc02817f79c6f989a9"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
- "cw2 1.0.0",
- "cw20",
- "schemars",
- "semver",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "der"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -580,30 +562,6 @@ dependencies = [
  "haloswap",
  "schemars",
  "serde",
-]
-
-[[package]]
-name = "halo-token"
-version = "0.1.0"
-dependencies = [
- "bignumber",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus 1.0.0",
- "cw2 1.0.0",
- "cw20",
- "cw20-base",
- "getrandom",
- "halo-factory",
- "halo-pair",
- "halo-router",
- "haloswap",
- "integer-sqrt",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]

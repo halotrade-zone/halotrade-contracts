@@ -24,7 +24,6 @@ library = []
 
 [dependencies]
 haloswap          = { workspace = true }
-halo-token        = { workspace = true }
 halo-pair         = { workspace = true }
 halo-router       = { workspace = true }
 halo-factory      = { workspace = true }
