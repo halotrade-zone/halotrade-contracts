@@ -17,7 +17,6 @@ The automated market-maker on [Aura](https://aura.network/) network.
 | [`halo_factory`](contracts/halo_factory) | Handle the information related to pairs                      |
 | [`halo_pair`](contracts/halo_pair)       | Containing a pair of assets                                  |
 | [`halo_router`](contracts/halo_router)   | Containing the logic to facilitate multi-hop swap operations |
-| [`halo_token`](contracts/halo_token)     | CW20 (ERC20 equivalent) token implementation for LP tokens   |
 
 * halo_router
 
@@ -32,12 +31,6 @@ The automated market-maker on [Aura](https://aura.network/) network.
    Testnet: `aura...`
 
 * halo_pair
-
-   Mainnet (CodeID):
-
-   Testnet (CodeID):
-
-* halo_token
 
    Mainnet (CodeID):
 

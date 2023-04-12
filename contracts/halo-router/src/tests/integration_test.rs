@@ -27,7 +27,7 @@ mod tests {
     const MOCK_HALO_TOKEN_ADDR: &str = "halo_token_addr";
 
     const MOCK_OFFER_CW20_AMOUNT: u128 = 1_000_000_000;
-    // Mock information for Halo Token
+    // Mock information for CW20 token contract
     const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
     // Mock information for native token
     const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
@@ -248,7 +248,7 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // query balance of USER_1 in halo token
+            // query balance of USER_1 in cw20 base token contract
             let balance: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(

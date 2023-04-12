@@ -4,7 +4,7 @@
 The factory contract will handle the information related to pairs. It will also create new pairs when users provide assets to the contract.
 
 ## InstantiateMsg
-We must provide the source code id of `halo_pair` contract and `halo-token` contract for `halo-factory` contract.
+We must provide the source code id of `halo_pair` contract and (`cw-20 base` contract)[https://github.com/halotrade-zone/cw-plus/tree/main/contracts/cw20-base] for `halo-factory` contract.
 ```javascript
 {
     "pair_code_id": 123,
@@ -26,7 +26,7 @@ We must provide the source code id of `halo_pair` contract and `halo-token` cont
 ```
 Where:
 - `owner` is the address of the owner of the factory contract.
-- `token_code_id` is the new source code id of `halo-token` contract.
+- `token_code_id` is the new source code id of (`cw-20 base` contract)[https://github.com/halotrade-zone/cw-plus/tree/main/contracts/cw20-base].
 - `pair_code_id` is the new source code id of `halo-pair` contract.
 
 ### CreatePair
