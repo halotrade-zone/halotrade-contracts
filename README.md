@@ -18,33 +18,15 @@ The automated market-maker on [Aura network](https://aura.network/).
 | [`halo_pair`](contracts/halo_pair)       | Containing a pair of assets                                  |
 | [`halo_router`](contracts/halo_router)   | Containing the logic to facilitate multi-hop swap operations |
 
-* halo_router
-
-   Mainnet: `aura...`
-
-   Testnet: `aura...`
-
-* halo_factory
-
-   Mainnet: `aura...`
-
-   Testnet: `aura...`
-
-* halo_pair
-
-   Mainnet (CodeID):
-
-   Testnet (CodeID):
-
 ## Running these contracts
 
 You will need Rust 1.66.0+ with wasm32-unknown-unknown target installed.
 
 ### Build the contract
-The contracts can be compiled using [beaker](https://github.com/osmosis-labs/beaker)
+The contracts can be compiled using [cargo](https://doc.rust-lang.org/cargo/commands/cargo-build.html)
 
 ```
-beaker wasm build
+cargo build
 ```
 with the optimizer is
 ```toml
@@ -54,17 +36,11 @@ optimizer_version = '0.12.11'
 Build .wasm file stored in `target/wasm32-unknown-unknown/release/<CONTRACT_NAME>.wasm`
 `--no-wasm-opt` is suitable for development, explained below
 
-```bash
-beaker wasm build --no-wasm-opt
-```
-
-The optimized contracts are generated in the `artifacts/` directory.
-
 ### Testing the contract
 To run the tests for the contract, run the following command:
 
 ```bash
-    RUST_BACKTRACE=1 cargo unit-test
+RUST_BACKTRACE=1 cargo unit-test
 ```
 
 This will build the contract and run a series of tests to ensure that it functions correctly. The tests are defined in the ./tests directory.

@@ -6,7 +6,7 @@ members = [
 
 [workspace.package]
 authors       = ["Aura network"]
-version       = "0.1.0"
+version       = "1.0.0"
 edition       = "2021"
 license       = "MIT"
 repository    = "https://github.com/halotrade-zone/halotrade-contracts"
@@ -21,8 +21,8 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [workspace.dependencies]
-bignumber         = { path = "./packages/bignumber", default-features = false, version = "0.1.0" }
-haloswap          = { path = "./packages/haloswap", default-features = false, version = "0.1.0" }
+bignumber         = { path = "./packages/bignumber", default-features = false, version = "1.0.0" }
+haloswap          = { path = "./packages/haloswap", default-features = false, version = "1.0.0" }
 halo-factory      = { path = "./contracts/halo-factory" }
 halo-pair         = { path = "./contracts/halo-pair" }
 halo-router       = { path = "./contracts/halo-router" }

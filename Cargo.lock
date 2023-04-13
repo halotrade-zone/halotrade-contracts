@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "bignumber"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bigint",
  "cosmwasm-schema",
@@ -527,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "halo-factory"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
@@ -546,7 +546,7 @@ dependencies = [
 
 [[package]]
 name = "halo-pair"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
@@ -566,7 +566,7 @@ dependencies = [
 
 [[package]]
 name = "halo-router"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
@@ -587,7 +587,7 @@ dependencies = [
 
 [[package]]
 name = "haloswap"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
