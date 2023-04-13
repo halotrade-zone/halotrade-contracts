@@ -2,7 +2,7 @@
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/halotrade-zone/halotrade-contracts/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/halotrade-zone/halotrade-contracts/tree/main)
 [![codecov](https://codecov.io/gh/halotrade-zone/halotrade-contracts/branch/main/graph/badge.svg?token=VWCAZGAVH2)](https://codecov.io/gh/halotrade-zone/halotrade-contracts)
 
-The automated market-maker on [Aura](https://aura.network/) network.
+The automated market-maker on [Aura network](https://aura.network/).
 
 ## Prerequisites
 
