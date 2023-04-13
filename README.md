@@ -7,16 +7,16 @@ The automated market-maker on [Aura network](https://aura.network/).
 ## Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install)
-- [Cosmos SDK](https://docs.cosmos.network/master/run-node/)
-- [CosmWasm](https://docs.cosmwasm.com/0.16/getting-started/installation.html)
+- [Cosmos SDK](https://docs.cosmos.network/main)
+- [CosmWasm](https://cosmwasm.com/)
 
 ## Contracts
 
 |                  Name                    |                        Description                           |
 | ---------------------------------------- | ------------------------------------------------------------ |
-| [`halo_factory`](contracts/halo_factory) | Handle the information related to pairs                      |
-| [`halo_pair`](contracts/halo_pair)       | Containing a pair of assets                                  |
-| [`halo_router`](contracts/halo_router)   | Containing the logic to facilitate multi-hop swap operations |
+| [`halo_factory`](https://github.com/halotrade-zone/halotrade-contracts/tree/main/contracts/halo-factory) | Handle the information related to pairs                      |
+| [`halo_pair`](https://github.com/halotrade-zone/halotrade-contracts/tree/main/contracts/halo-pair)       | Containing a pair of assets                                  |
+| [`halo_router`](https://github.com/halotrade-zone/halotrade-contracts/tree/main/contracts/halo-router)   | Containing the logic to facilitate multi-hop swap operations |
 
 ## Running these contracts
 
