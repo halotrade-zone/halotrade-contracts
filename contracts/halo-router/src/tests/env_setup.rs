@@ -14,12 +14,12 @@ pub mod env {
         reply as HaloPairReply,
     };
 
-    use halo_router::contract::{
+    use crate::contract::{
         execute as HaloRouterExecute, instantiate as HaloRouterInstantiate,
         query as HaloRouterQuery,
     };
 
-    use crate::contract::{
+    use cw20_base::contract::{
         execute as HaloTokenExecute, instantiate as HaloTokenInstantiate, query as HaloTokenQuery,
     };
 
@@ -132,7 +132,7 @@ pub mod env {
     pub fn instantiate_contracts() -> (App, Vec<ContractInfo>) {
         // Create a new app instance
         let mut app = mock_app();
-        // Create a vector to store all contract info ([halo factory - [0], halo router - [1], halo token - [2]])
+        // Create a vector to store all contract info ([halo factory - [0], halo router - [1], cw20-base token - [2]])
         let mut contract_info_vec: Vec<ContractInfo> = Vec::new();
 
         // store code of all contracts to the app and get the code ids
@@ -192,7 +192,7 @@ pub mod env {
             contract_code_id: halo_router_contract_code_id,
         });
 
-        // halo token contract
+        // cw20-base token contract
 
         // create instantiate message for contract
         let halo_token_contract_instantiate_msg = HaloTokenInstantiateMsg {
@@ -228,7 +228,7 @@ pub mod env {
         (app, contract_info_vec)
     }
 
-    // can not instantiate halo token with wrong validate condition (name, symbol, decimals)
+    // can not instantiate cw20-base token with wrong validate condition (name, symbol, decimals)
     #[test]
     fn cannot_instantiate_with_wrong_validate_condition() {
         let mut app = mock_app();
@@ -335,7 +335,7 @@ pub mod env {
 
         assert_eq!(
             err.source().unwrap().to_string(),
-            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\_]{3,20}")
+            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\-]{3,12}")
                 .to_string()
         );
 
@@ -352,7 +352,7 @@ pub mod env {
 
         assert_eq!(
             err.source().unwrap().to_string(),
-            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\_]{3,20}")
+            StdError::generic_err("Ticker symbol is not in expected format [a-zA-Z\\-]{3,12}")
                 .to_string()
         );
 

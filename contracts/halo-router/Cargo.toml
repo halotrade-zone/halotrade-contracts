@@ -25,12 +25,15 @@ library = []
 [dependencies]
 haloswap          = { workspace = true }
 bignumber         = { workspace = true }
+halo-factory      = { workspace = true }
+halo-pair        = { workspace = true }
 cosmwasm-schema   = { workspace = true }
 cosmwasm-std      = { workspace = true }
 cosmwasm-storage  = { workspace = true }
 cw-storage-plus   = { workspace = true }
 cw2               = { workspace = true }
 cw20              = { workspace = true }
+cw20-base         = { workspace = true }
 getrandom         = { workspace = true }
 schemars          = { workspace = true }
 serde             = { workspace = true }

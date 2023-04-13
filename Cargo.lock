@@ -576,34 +576,13 @@ dependencies = [
  "cw-storage-plus 1.0.0",
  "cw2 1.0.0",
  "cw20",
- "getrandom",
- "haloswap",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "halo-token"
-version = "0.1.0"
-dependencies = [
- "bignumber",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus 1.0.0",
- "cw2 1.0.0",
- "cw20",
  "cw20-base",
  "getrandom",
  "halo-factory",
  "halo-pair",
- "halo-router",
  "haloswap",
- "integer-sqrt",
  "schemars",
  "serde",
- "thiserror",
 ]
 
 [[package]]
