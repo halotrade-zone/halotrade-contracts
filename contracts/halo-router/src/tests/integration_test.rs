@@ -21,11 +21,11 @@ mod tests {
     const MOCK_TRANSACTION_FEE: u128 = 5000;
 
     // This module to verify Native Token works with cw20-token
-    // USER_1 Mint 1000 tokens to TKA
-    // USER_1 Create Pair: AURA - TKA
-    // USER_1 Add Liquidity: 1000 AURA - 1000 TKA
-    // USER_1 Swap: 1000 AURA -> TKA
-    // USER_1 Withdraw Liquidity: 1000 AURA - 1000 TKA
+    // USER_1 Mint 1000 tokens to HALO Token
+    // USER_1 Create Pair: AURA - HALO Token
+    // USER_1 Add Liquidity: 1000 AURA - 1000 HALO Token
+    // USER_1 Swap: 1000 AURA -> HALO Token
+    // USER_1 Withdraw Liquidity: 1000 AURA - 1000 HALO Token
     mod execute_contract_native_with_cw20_token {
         use std::str::FromStr;
 
