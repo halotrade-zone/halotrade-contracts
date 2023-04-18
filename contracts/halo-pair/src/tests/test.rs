@@ -42,6 +42,7 @@ fn proper_initialization() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_asset0000_lp".to_string(),
             lp_token_symbol: "uusd_asset0000_lp".to_string(),
+            lp_token_decimals: Some(18),
         },
     };
 
@@ -57,7 +58,7 @@ fn proper_initialization() {
                 msg: to_binary(&TokenInstantiateMsg {
                     name: "uusd_asset0000_lp".to_string(),
                     symbol: "uusd_asset0000_lp".to_string(),
-                    decimals: 6,
+                    decimals: 18,
                     initial_balances: vec![],
                     mint: Some(MinterResponse {
                         minter: MOCK_CONTRACT_ADDR.to_string(),
@@ -249,6 +250,7 @@ fn provide_liquidity() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_asset0000_LP".to_string(),
             lp_token_symbol: "uusd_asset0000_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -739,6 +741,7 @@ fn withdraw_liquidity() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_asset0000_LP".to_string(),
             lp_token_symbol: "uusd_asset0000_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -1066,6 +1069,7 @@ fn try_token_to_native() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_asset0000_LP".to_string(),
             lp_token_symbol: "uusd_asset0000_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -1508,6 +1512,7 @@ fn test_query_pool() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_asset0000_LP".to_string(),
             lp_token_symbol: "uusd_asset0000_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 

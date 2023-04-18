@@ -12,7 +12,6 @@ mod tests {
     use haloswap::factory::{
         ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
     };
-
     use haloswap::pair::Cw20HookMsg;
     // Mock information for CW20 token contract
     const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
@@ -174,6 +173,7 @@ mod tests {
                 lp_token_info: LPTokenInfo {
                     lp_token_name: "aura-HALO".to_string(),
                     lp_token_symbol: "aura-HALO".to_string(),
+                    lp_token_decimals: None,
                 },
             };
 

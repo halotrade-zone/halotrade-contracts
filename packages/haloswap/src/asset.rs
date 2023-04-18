@@ -320,4 +320,5 @@ impl PairInfoRaw {
 pub struct LPTokenInfo {
     pub lp_token_name: String,
     pub lp_token_symbol: String,
+    pub lp_token_decimals: Option<u8>,
 }

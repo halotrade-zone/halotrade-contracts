@@ -159,6 +159,7 @@ fn create_pair() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_mAAPL_LP".to_string(),
             lp_token_symbol: "uusd_mAAPL_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -191,7 +192,8 @@ fn create_pair() {
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                     lp_token_info: LPTokenInfo {
                         lp_token_name: "uusd_mAAPL_LP".to_string(),
-                        lp_token_symbol: "uusd_mAAPL_LP".to_string()
+                        lp_token_symbol: "uusd_mAAPL_LP".to_string(),
+                        lp_token_decimals: None,
                     },
                 })
                 .unwrap(),
@@ -239,6 +241,7 @@ fn create_pair() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_mAAPL_LP".to_string(),
             lp_token_symbol: "uusd_mAAPL_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -283,6 +286,7 @@ fn create_pair_native_token_and_ibc_token() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_ibc/HASH_LP".to_string(),
             lp_token_symbol: "uusd_ibc/HASH_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -312,7 +316,8 @@ fn create_pair_native_token_and_ibc_token() {
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                     lp_token_info: LPTokenInfo {
                         lp_token_name: "uusd_ibc/HASH_LP".to_string(),
-                        lp_token_symbol: "uusd_ibc/HASH_LP".to_string()
+                        lp_token_symbol: "uusd_ibc/HASH_LP".to_string(),
+                        lp_token_decimals: None,
                     },
                 })
                 .unwrap(),
@@ -367,6 +372,7 @@ fn fail_to_create_same_pair() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_uusd_LP".to_string(),
             lp_token_symbol: "uusd_uusd_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -402,6 +408,7 @@ fn fail_to_create_pair_with_unactive_denoms() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uusd_uxxx_LP".to_string(),
             lp_token_symbol: "uusd_uxxx_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -437,6 +444,7 @@ fn fail_to_create_pair_with_invalid_denom() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uluna_xxx_LP".to_string(),
             lp_token_symbol: "uluna_xxx_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -482,6 +490,7 @@ fn fail_to_create_pair_with_unknown_token() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uluna_xxx_LP".to_string(),
             lp_token_symbol: "uluna_xxx_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
@@ -527,6 +536,7 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
         lp_token_info: LPTokenInfo {
             lp_token_name: "uluna_ibc/HA_LP".to_string(),
             lp_token_symbol: "uluna_ibc/HA_LP".to_string(),
+            lp_token_decimals: None,
         },
     };
 
