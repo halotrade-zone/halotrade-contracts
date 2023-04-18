@@ -58,7 +58,7 @@ pub fn instantiate(
             msg: to_binary(&TokenInstantiateMsg {
                 name: msg.lp_token_info.clone().lp_token_name,
                 symbol: msg.lp_token_info.lp_token_symbol,
-                decimals: 6,
+                decimals: msg.lp_token_info.lp_token_decimals.unwrap_or(6),
                 initial_balances: vec![],
                 mint: Some(MinterResponse {
                     minter: env.contract.address.to_string(),

@@ -186,6 +186,7 @@ pub fn execute_create_pair(
                     lp_token_info: LPTokenInfo {
                         lp_token_name: lp_token_info.lp_token_name,
                         lp_token_symbol: lp_token_info.lp_token_symbol,
+                        lp_token_decimals: lp_token_info.lp_token_decimals,
                     },
                 })?,
             }),
