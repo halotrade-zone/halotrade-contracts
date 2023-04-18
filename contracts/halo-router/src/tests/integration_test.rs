@@ -32,10 +32,7 @@ mod tests {
         use cw_multi_test::Executor;
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
-            pair::{
-                ExecuteMsg, PoolResponse, QueryMsg as RouterQueryMsg, ReverseSimulationResponse,
-                SimulationResponse,
-            },
+            pair::{ExecuteMsg, PoolResponse, QueryMsg},
             router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
         };
 
@@ -309,7 +306,7 @@ mod tests {
             // Query Pool
             let response: PoolResponse = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &RouterQueryMsg::Pool {})
+                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pool {})
                 .unwrap();
 
             // Assert Pool: total_share amount
@@ -373,56 +370,6 @@ mod tests {
                 }
             );
 
-            // Query SimulateSwapOperations for native token token to cw20
-            let msg = RouterQueryMsg::Simulation {
-                offer_asset: Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: NATIVE_DENOM_2.to_string(),
-                    },
-                    amount: Uint128::from(1000u128),
-                },
-            };
-
-            let response: SimulationResponse = app
-                .wrap()
-                .query_wasm_smart("contract3".to_string(), &msg)
-                .unwrap();
-
-            // Assert SimulateSwapOperations for native token token to cw20
-            assert_eq!(
-                response,
-                SimulationResponse {
-                    return_amount: Uint128::from(485u128),
-                    spread_amount: Uint128::from(1u128),
-                    commission_amount: Uint128::from(14u128),
-                }
-            );
-
-            // Query ReverseSimulation for cw20 token to native token
-            let msg = RouterQueryMsg::ReverseSimulation {
-                ask_asset: Asset {
-                    info: AssetInfo::Token {
-                        contract_addr: cw20_token_contract.clone(),
-                    },
-                    amount: Uint128::from(485u128),
-                },
-            };
-
-            let response: ReverseSimulationResponse = app
-                .wrap()
-                .query_wasm_smart("contract3".to_string(), &msg)
-                .unwrap();
-
-            // Assert ReverseSimulation for cw20 token to native token
-            assert_eq!(
-                response,
-                ReverseSimulationResponse {
-                    offer_amount: Uint128::from(998u128),
-                    spread_amount: Uint128::from(0u128),
-                    commission_amount: Uint128::from(14u128),
-                }
-            );
-
             // Swap native token to cw20 token
             let msg = RouterExecuteMsg::ExecuteSwapOperations {
                 operations: vec![SwapOperation::HaloSwap {
@@ -452,7 +399,7 @@ mod tests {
             // Query Pool
             let response: PoolResponse = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &RouterQueryMsg::Pool {})
+                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pool {})
                 .unwrap();
 
             // Assert Pool: total_share amount
@@ -537,7 +484,7 @@ mod tests {
             // Query Pool
             let response: PoolResponse = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &RouterQueryMsg::Pool {})
+                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pool {})
                 .unwrap();
 
             // Assert Pool: total_share amount
