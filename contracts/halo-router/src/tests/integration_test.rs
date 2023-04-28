@@ -14,13 +14,13 @@ mod tests {
     };
     use haloswap::pair::Cw20HookMsg;
     // Mock information for CW20 token contract
-    const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
+    const MOCK_1000_000_000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000_000_000_000_000_000_000;
     // Mock information for native token
-    const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
+    const MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000_000_000_000_000_000_000;
     const MOCK_TRANSACTION_FEE: u128 = 5000;
 
     // This module to verify Native Token works with cw20-token
-    // USER_1 Mint 1000 tokens to HALO Token
+    // USER_1 Mint 1000_000_000 tokens to HALO Token
     // USER_1 Create Pair: AURA - HALO Token
     // USER_1 Add Liquidity: 1000 AURA - 1000 HALO Token
     // USER_1 Swap: 1000 AURA -> HALO Token
@@ -54,7 +54,7 @@ mod tests {
                 cw_multi_test::BankSudo::Mint {
                     to_address: USER_1.to_string(),
                     amount: vec![Coin {
-                        amount: Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT),
+                        amount: Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT),
                         denom: NATIVE_DENOM_2.to_string(),
                     }],
                 },
@@ -72,7 +72,7 @@ mod tests {
             // It should be 1_000_000_000 NATIVE_DENOM_2 as minting happened
             assert_eq!(
                 balance.amount.amount,
-                Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT)
+                Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT)
             );
 
             // query balance of USER_1 in Halo token
@@ -91,7 +91,7 @@ mod tests {
             // Mint 1000 tokens to USER_1
             let mint_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Mint {
                 recipient: USER_1.to_string(),
-                amount: Uint128::from(MOCK_1000_HALO_TOKEN_AMOUNT),
+                amount: Uint128::from(MOCK_1000_000_000_HALO_TOKEN_AMOUNT),
             };
 
             // Execute minting
@@ -117,15 +117,18 @@ mod tests {
                     },
                 )
                 .unwrap();
-            // It should be 1000 token A as minting happened
-            assert_eq!(balance.balance, Uint128::from(MOCK_1000_HALO_TOKEN_AMOUNT));
+            // It should be 1000_000_000 token A as minting happened
+            assert_eq!(
+                balance.balance,
+                Uint128::from(MOCK_1000_000_000_HALO_TOKEN_AMOUNT)
+            );
 
             // Create Pair: AURA - HALO Token
 
             // Add Native Token Decimals
             let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
                 denom: NATIVE_DENOM_2.to_string(),
-                decimals: 6u8,
+                decimals: 18u8,
             };
 
             // Execute add native token decimals
@@ -151,7 +154,7 @@ mod tests {
                     },
                 )
                 .unwrap();
-            assert_eq!(response.decimals, 6u8);
+            assert_eq!(response.decimals, 18u8);
 
             let asset_infos = [
                 AssetInfo::NativeToken {
@@ -173,7 +176,7 @@ mod tests {
                 lp_token_info: LPTokenInfo {
                     lp_token_name: "aura-HALO".to_string(),
                     lp_token_symbol: "aura-HALO".to_string(),
-                    lp_token_decimals: None,
+                    lp_token_decimals: Some(18u8),
                 },
             };
 
@@ -221,7 +224,7 @@ mod tests {
                         },
                     ],
                     contract_addr: "contract3".to_string(), // Pair Contract
-                    asset_decimals: [6u8, 6u8],
+                    asset_decimals: [18u8, 18u8],
                     requirements: CreatePairRequirements {
                         whitelist: vec![Addr::unchecked(USER_1.to_string())],
                         first_asset_minimum: Uint128::zero(),
@@ -244,7 +247,7 @@ mod tests {
                 TokenInfoResponse {
                     name: "aura-HALO".to_string(),
                     symbol: "aura-HALO".to_string(),
-                    decimals: 6u8,
+                    decimals: 18u8,
                     total_supply: Uint128::zero(),
                 }
             );
@@ -254,7 +257,7 @@ mod tests {
             // Approve cw20 token to pair contract
             let approve_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: "contract3".to_string(), // Pair Contract
-                amount: Uint128::from(2_000_000u128),
+                amount: Uint128::from(2_000_000_000_000_000_000_000_000u128),
                 expires: None,
             };
 
@@ -278,13 +281,13 @@ mod tests {
                         info: AssetInfo::NativeToken {
                             denom: NATIVE_DENOM_2.to_string(),
                         },
-                        amount: Uint128::from(2_000_000u128),
+                        amount: Uint128::from(2_000_000_000_000_000_000_000_000u128),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: cw20_token_contract.clone(),
                         },
-                        amount: Uint128::from(1_000_000u128),
+                        amount: Uint128::from(1_000_000_000_000_000_000_000_000u128),
                     },
                 ],
                 slippage_tolerance: None,
@@ -296,7 +299,7 @@ mod tests {
                 Addr::unchecked("contract3".to_string()),
                 &provide_liquidity_msg,
                 &[Coin {
-                    amount: Uint128::from(2_000_000u128),
+                    amount: Uint128::from(2_000_000_000_000_000_000_000_000u128),
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
@@ -318,17 +321,17 @@ mod tests {
                             info: AssetInfo::NativeToken {
                                 denom: NATIVE_DENOM_2.to_string(),
                             },
-                            amount: Uint128::from(2000000u128),
+                            amount: Uint128::from(2_000_000_000_000_000_000_000_000u128),
                         },
                         Asset {
                             info: AssetInfo::Token {
                                 contract_addr: cw20_token_contract.clone(),
                             },
-                            amount: Uint128::from(1000000u128),
+                            amount: Uint128::from(1_000_000_000_000_000_000_000_000u128),
                         },
                     ],
                     // Verify the total share amount is reserved 1 uLP
-                    total_share: 1414213u128.into(),
+                    total_share: 1414213562373000000000000u128.into(),
                 }
             );
 
@@ -347,7 +350,7 @@ mod tests {
             assert_eq!(
                 response,
                 BalanceResponse {
-                    balance: Uint128::from(1414212u128),
+                    balance: Uint128::from(1414213562372999999999999u128),
                 }
             );
 
@@ -412,18 +415,18 @@ mod tests {
                                 denom: NATIVE_DENOM_2.to_string(),
                             },
                             // Verify the native token amount is increased
-                            amount: Uint128::from(2001000u128),
+                            amount: Uint128::from(2000000000000000000001000u128),
                         },
                         Asset {
                             info: AssetInfo::Token {
                                 contract_addr: "contract2".to_string(),
                             },
                             // Verify the cw20 token amount is decreased
-                            amount: Uint128::from(999515u128),
+                            amount: Uint128::from(999999999999999999999515u128),
                         },
                     ],
                     // Verify the total share amount is reserved 1 uLP
-                    total_share: 1414213u128.into(),
+                    total_share: 1414213562373000000000000u128.into(),
                 }
             );
 
@@ -442,7 +445,7 @@ mod tests {
             assert_eq!(
                 response,
                 BalanceResponse {
-                    balance: Uint128::from(999000485u128),
+                    balance: Uint128::from(999000000000000000000000485u128),
                 }
             );
 
@@ -457,14 +460,17 @@ mod tests {
             // Verify the native token amount of USER_1 is decreased
             assert_eq!(
                 balance.amount.amount,
-                Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT - (2001000u128 + MOCK_TRANSACTION_FEE))
+                Uint128::from(
+                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT
+                        - (2_000_000_000_000_000_000_001_000u128 + MOCK_TRANSACTION_FEE)
+                )
             );
 
             // USER 1 Withdraw Liquidity
             // Send LP token to Pair Contract
             let send_lp_token_msg = Cw20ExecuteMsg::Send {
                 contract: "contract3".to_string(),
-                amount: Uint128::from(1414212u128),
+                amount: Uint128::from(1414213562372999999999999u128),
                 msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
             };
 
@@ -496,15 +502,15 @@ mod tests {
                             info: AssetInfo::NativeToken {
                                 denom: NATIVE_DENOM_2.to_string(),
                             },
-                            // Verify the native token amount is increased
-                            amount: Uint128::from(2u128),
+                            // Verify the native token amount is increased in
+                            amount: Uint128::from(2000001u128),
                         },
                         Asset {
                             info: AssetInfo::Token {
                                 contract_addr: "contract2".to_string(),
                             },
                             // Verify the cw20 token amount is decreased
-                            amount: Uint128::from(1u128),
+                            amount: Uint128::from(1000000u128),
                         },
                     ],
                     // Verify the total share amount is reserved 1 uLP
@@ -546,8 +552,8 @@ mod tests {
             assert_eq!(
                 response,
                 BalanceResponse {
-                    // USER_1 should lose 1 HALO token that already reserved for the Pool
-                    balance: Uint128::from(MOCK_1000_HALO_TOKEN_AMOUNT - 1u128),
+                    // USER_1 should lose 1_000_000 uHALO token that already reserved for the Pool
+                    balance: Uint128::from(MOCK_1000_000_000_HALO_TOKEN_AMOUNT - 1_000_000u128),
                 }
             );
 
@@ -563,7 +569,9 @@ mod tests {
                 balance.amount.amount,
                 // USER_1 should lose 2 native token that already reserved for the Pool
                 // and 10000 utaura native token for transaction fee
-                Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT - 2u128 - MOCK_TRANSACTION_FEE * 2)
+                Uint128::from(
+                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - 2000001u128 - MOCK_TRANSACTION_FEE * 2
+                )
             );
         }
     }
