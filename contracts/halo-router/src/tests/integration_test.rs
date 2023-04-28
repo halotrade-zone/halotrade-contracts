@@ -118,7 +118,10 @@ mod tests {
                 )
                 .unwrap();
             // It should be 1000_000_000 token A as minting happened
-            assert_eq!(balance.balance, Uint128::from(MOCK_1000_000_000_HALO_TOKEN_AMOUNT));
+            assert_eq!(
+                balance.balance,
+                Uint128::from(MOCK_1000_000_000_HALO_TOKEN_AMOUNT)
+            );
 
             // Create Pair: AURA - HALO Token
 
@@ -457,7 +460,10 @@ mod tests {
             // Verify the native token amount of USER_1 is decreased
             assert_eq!(
                 balance.amount.amount,
-                Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - (2_000_000_000_000_000_000_001_000u128 + MOCK_TRANSACTION_FEE))
+                Uint128::from(
+                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT
+                        - (2_000_000_000_000_000_000_001_000u128 + MOCK_TRANSACTION_FEE)
+                )
             );
 
             // USER 1 Withdraw Liquidity
@@ -563,7 +569,9 @@ mod tests {
                 balance.amount.amount,
                 // USER_1 should lose 2 native token that already reserved for the Pool
                 // and 10000 utaura native token for transaction fee
-                Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - 2000001u128 - MOCK_TRANSACTION_FEE * 2)
+                Uint128::from(
+                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - 2000001u128 - MOCK_TRANSACTION_FEE * 2
+                )
             );
         }
     }
