@@ -5,12 +5,13 @@ use crate::state::{COMMISSION_RATE_INFO, PAIR_INFO};
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Reply, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg,
+    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
-use haloswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw, LP_TOKEN_RESERVED_AMOUNT};
+use halo_factory::state::{CONFIG, Config};
+use haloswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw, LP_TOKEN_RESERVED_AMOUNT, AssetInfoRaw};
 use haloswap::error::ContractError;
 use haloswap::formulas::{calculate_lp_token_amount_to_user, compute_offer_amount, compute_swap};
 use haloswap::pair::{
@@ -114,7 +115,11 @@ pub fn execute(
                 max_spread,
                 to_addr,
             )
-        }
+        },
+        ExecuteMsg::UpdateNativeTokenDecimals {
+            denom,
+            asset_decimals,
+        } => update_native_token_decimals(deps, env, info, denom, asset_decimals),
     }
 }
 
@@ -231,7 +236,7 @@ pub fn provide_liquidity(
 
     // If the asset is a token, the value of pools[i] is correct. But we must take the token from the user.
     // If the asset is a native token, the amount of native token is already sent with the message to the pool.
-    // So we must subtract that ammount of native token from the pools[i].
+    // So we must subtract that amount of native token from the pools[i].
     // pools[] will be used to calculate the amount of LP token to mint after.
     let mut messages: Vec<CosmosMsg> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
@@ -315,6 +320,8 @@ pub fn provide_liquidity(
         ("share", &share.to_string()),
     ]))
 }
+
+
 
 pub fn withdraw_liquidity(
     deps: DepsMut,
@@ -459,6 +466,50 @@ pub fn swap(
         ("commission_amount", &commission_amount.to_string()),
     ]))
 }
+
+pub fn update_native_token_decimals(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    denom: String,
+    asset_decimals: [u8; 2],
+) -> Result<Response, ContractError> {
+    // let config: Config = CONFIG.load(deps.storage)?;
+
+    // // permission check
+    // if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+    //     return Err(ContractError::Unauthorized {});
+    // }
+
+    let mut pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
+
+    let mut asset_infos = pair_info.asset_infos;
+    for asset_info in asset_infos.iter_mut() {
+        if let AssetInfoRaw::NativeToken { denom: d, .. } = asset_info {
+            if d == &denom {
+                pair_info.asset_decimals = asset_decimals;
+            }
+        }
+    }
+
+    let pair_info = PairInfoRaw {
+        contract_addr: pair_info.contract_addr,
+        liquidity_token: pair_info.liquidity_token,
+        asset_infos,
+        asset_decimals: pair_info.asset_decimals,
+        requirements: pair_info.requirements,
+        commission_rate: pair_info.commission_rate,
+    };
+
+    PAIR_INFO.save(deps.storage, &pair_info)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "update_native_token_decimals"),
+        ("pair_decimals", &format!("{}-{}", asset_decimals[0], asset_decimals[1])),
+    ]))
+}
+
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {

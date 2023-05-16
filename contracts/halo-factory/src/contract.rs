@@ -202,7 +202,7 @@ pub fn execute_add_native_token_decimals(
     decimals: u8,
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
-
+    let mut messages: Vec<CosmosMsg> = vec![];
     // permission check
     if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
         return Err(StdError::generic_err("unauthorized"));
@@ -217,7 +217,73 @@ pub fn execute_add_native_token_decimals(
 
     add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
 
-    Ok(Response::new().add_attributes(vec![
+    // Update the native token decimals for the existing pairs
+    let pair_infos = read_pairs(deps.storage, deps.api, None, None)?;
+
+    for pair_info in pair_infos {
+        // Get the pair key from the pair info
+        let pair_key = pair_key(&[
+            pair_info.asset_infos[0].to_raw(deps.api)?,
+            pair_info.asset_infos[1].to_raw(deps.api)?,
+        ]);
+
+        // Get raw pair info from the pair key
+        let pair_info_raw: PairInfoRaw = PAIRS.load(deps.storage, &pair_key)?;
+
+        if pair_info.asset_infos[0].is_native_token()
+            && pair_info.asset_infos[0].query_denom_of_native_token().unwrap() == denom
+        {
+            PAIRS.save(
+                deps.storage,
+                &pair_key,
+                &PairInfoRaw {
+                    liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
+                    contract_addr: pair_info_raw.contract_addr.clone(),
+                    asset_infos: pair_info_raw.asset_infos.clone(),
+                    asset_decimals: [decimals, pair_info_raw.asset_decimals[1]],
+                    requirements: pair_info_raw.requirements.clone(),
+                    commission_rate: pair_info_raw.commission_rate,
+                },
+            )?;
+            // Update the pair contract by calling the update_native_token_decimals msg
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: deps.api.addr_humanize(&pair_info_raw.contract_addr)?.to_string(),
+                msg: to_binary(&haloswap::pair::ExecuteMsg::UpdateNativeTokenDecimals {
+                    denom: denom.clone(),
+                    asset_decimals: [decimals, pair_info_raw.asset_decimals[1]],
+                })?,
+                funds: vec![],
+            }));
+
+        }
+        if pair_info.asset_infos[1].is_native_token()
+            && pair_info.asset_infos[1].query_denom_of_native_token().unwrap() == denom
+        {
+            PAIRS.save(
+                deps.storage,
+                &pair_key,
+                &PairInfoRaw {
+                    liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
+                    contract_addr: pair_info_raw.contract_addr.clone(),
+                    asset_infos: pair_info_raw.asset_infos,
+                    asset_decimals: [pair_info_raw.asset_decimals[0], decimals],
+                    requirements: pair_info_raw.requirements,
+                    commission_rate: pair_info_raw.commission_rate,
+                },
+            )?;
+            // Update the pair contract by calling the update_native_token_decimals msg
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: deps.api.addr_humanize(&pair_info_raw.contract_addr)?.to_string(),
+                msg: to_binary(&haloswap::pair::ExecuteMsg::UpdateNativeTokenDecimals {
+                    denom: denom.clone(),
+                    asset_decimals: [pair_info_raw.asset_decimals[0], decimals],
+                })?,
+                funds: vec![],
+            }));
+        }
+    }
+
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "add_allow_native_token"),
         ("denom", &denom),
         ("decimals", &decimals.to_string()),
