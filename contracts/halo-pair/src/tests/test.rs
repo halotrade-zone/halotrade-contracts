@@ -1098,7 +1098,7 @@ fn try_token_to_native() {
     // unauthorized access; can not execute swap directly for token swap
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        amount: Uint128::zero(),
+        amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
             offer_asset: Asset {
                 info: AssetInfo::Token {
@@ -1118,6 +1118,32 @@ fn try_token_to_native() {
 
     match res {
         ContractError::Unauthorized {} => (),
+        _ => panic!("DO NOT ENTER HERE"),
+    }
+
+    // asset mismatch; mismatch amount of asset token in Cw20ReceiveMsg and Cw20HookMsg::Swap
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: Uint128::zero(),
+        msg: to_binary(&Cw20HookMsg::Swap {
+            offer_asset: Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: offer_amount,
+            },
+            belief_price: None,
+            max_spread: None,
+            to: None,
+        })
+        .unwrap(),
+    });
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    match res {
+        ContractError::AssetMismatch {} => (),
         _ => panic!("DO NOT ENTER HERE"),
     }
 

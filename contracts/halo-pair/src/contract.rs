@@ -138,6 +138,11 @@ pub fn receive_cw20(
             max_spread,
             to,
         }) => {
+            // verify amount of asset info is same as the amount in cw20_msg
+            if offer_asset.amount != cw20_msg.amount {
+                return Err(ContractError::AssetMismatch {});
+            }
+
             // only asset contract can execute this message
             let mut authorized: bool = false;
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -150,6 +155,7 @@ pub fn receive_cw20(
                     }
                 }
             }
+
             if !authorized {
                 return Err(ContractError::Unauthorized {});
             }
