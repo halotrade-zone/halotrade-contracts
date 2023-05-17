@@ -934,7 +934,7 @@ mod tests {
                                 denom: NATIVE_DENOM_2.to_string(),
                             },
                             AssetInfo::Token {
-                                contract_addr: cw20_token_contract.clone(),
+                                contract_addr: cw20_token_contract,
                             },
                         ],
                     },
@@ -948,7 +948,7 @@ mod tests {
             let response: PairInfo = app
                 .wrap()
                 .query_wasm_smart(
-                    factory_contract.clone(),
+                    factory_contract,
                     &FactoryQueryMsg::Pair {
                         asset_infos: [
                             AssetInfo::NativeToken {
