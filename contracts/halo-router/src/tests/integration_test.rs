@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM, NATIVE_DENOM_2, USER_1};
+    use crate::tests::env_setup::env::{
+        instantiate_contracts, ADMIN, NATIVE_DENOM, NATIVE_DENOM_2, USER_1,
+    };
     use bignumber::Decimal256;
     use cosmwasm_std::{
         from_binary, to_binary, Addr, BalanceResponse as BankBalanceResponse, BankQuery, Coin,
@@ -577,13 +579,11 @@ mod tests {
         // Query Native Token Decimals for NATIVE_DENOM and NATIVE_DENOM_2 on all pairs
         // and it should be [8,9] for [NATIVE_DENOM, NATIVE_DENOM_2]
         #[test]
-        fn update_native_token_decimals_for_pairs(){
+        fn update_native_token_decimals_for_pairs() {
             // get integration test app and contracts
             let (mut app, contracts) = instantiate_contracts();
             // Get factory contract
             let factory_contract = contracts[0].contract_addr.clone();
-            // Get router contract
-            let router_contract = contracts[1].contract_addr.clone();
             // Get cw20 token contract
             let cw20_token_contract = contracts[2].contract_addr.clone();
 
@@ -668,26 +668,26 @@ mod tests {
 
             // Assert decimals of native token of NATIVE_DENOM
             let response: NativeTokenDecimalsResponse = app
-            .wrap()
-            .query_wasm_smart(
-                factory_contract.clone(),
-                &FactoryQueryMsg::NativeTokenDecimals {
-                    denom: NATIVE_DENOM.to_string(),
-                },
-            )
-            .unwrap();
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::NativeTokenDecimals {
+                        denom: NATIVE_DENOM.to_string(),
+                    },
+                )
+                .unwrap();
             assert_eq!(response.decimals, 6u8);
 
             // Assert decimals of native token of NATIVE_DENOM_2
             let response: NativeTokenDecimalsResponse = app
-            .wrap()
-            .query_wasm_smart(
-                factory_contract.clone(),
-                &FactoryQueryMsg::NativeTokenDecimals {
-                    denom: NATIVE_DENOM_2.to_string(),
-                },
-            )
-            .unwrap();
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::NativeTokenDecimals {
+                        denom: NATIVE_DENOM_2.to_string(),
+                    },
+                )
+                .unwrap();
             assert_eq!(response.decimals, 6u8);
 
             // Create Pair: NATIVE_DENOM - HALO Token
@@ -746,10 +746,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [6u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [6u8, 6u8]);
 
             // Create Pair: NATIVE_DENOM_2 - HALO Token
             let asset_infos = [
@@ -807,10 +804,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [6u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [6u8, 6u8]);
 
             // Create Pair: NATIVE_DENOM - NATIVE_DENOM_2
             let asset_infos = [
@@ -868,10 +862,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [6u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [6u8, 6u8]);
 
             // Add Native Token Decimals for NATIVE_DENOM
             let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
@@ -889,10 +880,10 @@ mod tests {
                     denom: NATIVE_DENOM.to_string(),
                 }],
             );
-
+            println!("{:?}", response);
             assert!(response.is_ok());
 
-            // Add Native Token Decimals for NATIVE_DENOM
+            // Add Native Token Decimals for NATIVE_DENOM_2
             let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
                 denom: NATIVE_DENOM_2.to_string(),
                 decimals: 9u8,
@@ -930,10 +921,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [8u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [8u8, 6u8]);
 
             // Query NATIVE_DENOM_2 - HALO Pair
             let response: PairInfo = app
@@ -954,10 +942,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [9u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [9u8, 6u8]);
 
             // Query NATIVE_DENOM - NATIVE_DENOM_2 Pair
             let response: PairInfo = app
@@ -978,57 +963,34 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [8u8, 9u8]
-            );
+            assert_eq!(response.asset_decimals, [8u8, 9u8]);
 
             // Query Pair of NATIVE_DENOM - HALO Pair
             let response: PairInfo = app
                 .wrap()
-                .query_wasm_smart(
-                    "contract3".to_string(),
-                    &QueryMsg::Pair {},
-                )
+                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pair {})
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [8u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [8u8, 6u8]);
 
             // Query Pair of NATIVE_DENOM_2 - HALO Pair
             let response: PairInfo = app
                 .wrap()
-                .query_wasm_smart(
-                    "contract5".to_string(),
-                    &QueryMsg::Pair {},
-                )
+                .query_wasm_smart("contract5".to_string(), &QueryMsg::Pair {})
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [9u8, 6u8]
-            );
+            assert_eq!(response.asset_decimals, [9u8, 6u8]);
 
             // Query Pair of NATIVE_DENOM - NATIVE_DENOM_2 Pair
             let response: PairInfo = app
                 .wrap()
-                .query_wasm_smart(
-                    "contract7".to_string(),
-                    &QueryMsg::Pair {},
-                )
+                .query_wasm_smart("contract7".to_string(), &QueryMsg::Pair {})
                 .unwrap();
 
-            println!("{:?}", response);
             // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
-            assert_eq!(
-                response.asset_decimals,
-                [8u8, 9u8]
-            );
-
+            assert_eq!(response.asset_decimals, [8u8, 9u8]);
         }
     }
 }
