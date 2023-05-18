@@ -79,6 +79,8 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             receiver,
         } => assert_minium_receive(
             deps.as_ref(),
+            env,
+            info,
             asset_info,
             prev_balance,
             minimum_receive,

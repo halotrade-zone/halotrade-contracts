@@ -130,6 +130,15 @@ pub fn execute_create_pair(
         return Err(StdError::generic_err("same asset"));
     }
 
+    // commission rate must be between 0 and 1 equivalents to 0% to 100%
+    if let Some(commission_rate) = commission_rate {
+        if commission_rate > Decimal256::one() {
+            return Err(StdError::generic_err(
+                "commission rate must be between 0 and 1 (equivalents to 0% to 100%)",
+            ));
+        }
+    }
+
     let asset_1_decimal =
         match asset_infos[0].query_decimals(env.contract.address.clone(), &deps.querier) {
             Ok(decimal) => decimal,

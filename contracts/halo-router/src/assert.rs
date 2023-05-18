@@ -1,15 +1,22 @@
-use cosmwasm_std::{Addr, Deps, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Deps, Env, MessageInfo, Response, StdError, StdResult, Uint128};
 use haloswap::asset::AssetInfo;
 use haloswap::router::SwapOperation;
 use std::collections::HashMap;
 
 pub fn assert_minium_receive(
     deps: Deps,
+    env: Env,
+    info: MessageInfo,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minium_receive: Uint128,
     receiver: Addr,
 ) -> StdResult<Response> {
+    if env.contract.address != info.sender {
+        return Err(StdError::generic_err(
+            "unauthorized: assert_minium_receive only can be called by contract itself",
+        ));
+    }
     let receiver_balance = asset_info.query_pool(&deps.querier, deps.api, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 

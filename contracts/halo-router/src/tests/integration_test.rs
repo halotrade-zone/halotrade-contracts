@@ -880,7 +880,7 @@ mod tests {
                     denom: NATIVE_DENOM.to_string(),
                 }],
             );
-            println!("{:?}", response);
+
             assert!(response.is_ok());
 
             // Add Native Token Decimals for NATIVE_DENOM_2
