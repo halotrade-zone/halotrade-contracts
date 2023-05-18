@@ -1,5 +1,5 @@
 use crate::assert::{assert_max_spread, assert_slippage_tolerance};
-use crate::state::{COMMISSION_RATE_INFO, PAIR_INFO};
+use crate::state::{Config, COMMISSION_RATE_INFO, CONFIG, PAIR_INFO};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -10,7 +10,9 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
-use haloswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw, LP_TOKEN_RESERVED_AMOUNT};
+use haloswap::asset::{
+    Asset, AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, LP_TOKEN_RESERVED_AMOUNT,
+};
 use haloswap::error::ContractError;
 use haloswap::formulas::{calculate_lp_token_amount_to_user, compute_offer_amount, compute_swap};
 use haloswap::pair::{
@@ -29,7 +31,7 @@ const INSTANTIATE_REPLY_ID: u64 = 1;
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -45,6 +47,14 @@ pub fn instantiate(
         requirements: msg.requirements,
         commission_rate: msg.commission_rate,
     };
+
+    // Store factory contract address which is used to create pair contract
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            halo_factory: info.sender,
+        },
+    )?;
 
     PAIR_INFO.save(deps.storage, pair_info)?;
 
@@ -115,6 +125,10 @@ pub fn execute(
                 to_addr,
             )
         }
+        ExecuteMsg::UpdateNativeTokenDecimals {
+            denom,
+            asset_decimals,
+        } => update_native_token_decimals(deps, env, info, denom, asset_decimals),
     }
 }
 
@@ -133,6 +147,11 @@ pub fn receive_cw20(
             max_spread,
             to,
         }) => {
+            // verify amount of asset info is same as the amount in cw20_msg
+            if offer_asset.amount != cw20_msg.amount {
+                return Err(ContractError::AssetMismatch {});
+            }
+
             // only asset contract can execute this message
             let mut authorized: bool = false;
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -145,6 +164,7 @@ pub fn receive_cw20(
                     }
                 }
             }
+
             if !authorized {
                 return Err(ContractError::Unauthorized {});
             }
@@ -231,7 +251,7 @@ pub fn provide_liquidity(
 
     // If the asset is a token, the value of pools[i] is correct. But we must take the token from the user.
     // If the asset is a native token, the amount of native token is already sent with the message to the pool.
-    // So we must subtract that ammount of native token from the pools[i].
+    // So we must subtract that amount of native token from the pools[i].
     // pools[] will be used to calculate the amount of LP token to mint after.
     let mut messages: Vec<CosmosMsg> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
@@ -457,6 +477,48 @@ pub fn swap(
         ("return_amount", &return_amount.to_string()),
         ("spread_amount", &spread_amount.to_string()),
         ("commission_amount", &commission_amount.to_string()),
+    ]))
+}
+
+pub fn update_native_token_decimals(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    denom: String,
+    asset_decimals: [u8; 2],
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // permission check
+    if info.sender.as_str() != config.halo_factory {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut pair_info_raw: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
+
+    let mut asset_infos = pair_info_raw.asset_infos;
+    for asset_info in asset_infos.iter_mut() {
+        if let AssetInfoRaw::NativeToken { denom: d, .. } = asset_info {
+            if d == &denom {
+                pair_info_raw.asset_decimals = asset_decimals;
+            }
+        }
+    }
+
+    PAIR_INFO.save(
+        deps.storage,
+        &PairInfoRaw {
+            asset_infos,
+            ..pair_info_raw
+        },
+    )?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "update_native_token_decimals"),
+        (
+            "pair_decimals",
+            &format!("{}-{}", asset_decimals[0], asset_decimals[1]),
+        ),
     ]))
 }
 

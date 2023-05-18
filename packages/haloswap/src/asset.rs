@@ -187,6 +187,15 @@ impl AssetInfo {
             }
         }
     }
+
+    pub fn query_denom_of_native_token(&self) -> StdResult<String> {
+        match self {
+            AssetInfo::NativeToken { denom } => Ok(denom.to_string()),
+            AssetInfo::Token { .. } => Err(StdError::generic_err(
+                "query_denom_of_native_token: not native token",
+            )),
+        }
+    }
 }
 
 #[cw_serde]
@@ -226,6 +235,13 @@ impl AssetInfoRaw {
             AssetInfoRaw::Token { contract_addr } => Ok(AssetInfo::Token {
                 contract_addr: api.addr_humanize(contract_addr)?.to_string(),
             }),
+        }
+    }
+
+    pub fn is_native_token(&self) -> bool {
+        match self {
+            AssetInfoRaw::NativeToken { .. } => true,
+            AssetInfoRaw::Token { .. } => false,
         }
     }
 

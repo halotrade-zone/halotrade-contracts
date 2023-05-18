@@ -101,6 +101,7 @@ fn execute_swap_operations() {
 
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
     assert_eq!(
         res.messages,
         vec![
@@ -882,7 +883,7 @@ fn assert_minimum_receive_native_token() {
         .to_vec(),
     )]);
 
-    let info = mock_info("addr0000", &[]);
+    let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
     // success
     let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::NativeToken {
@@ -921,7 +922,7 @@ fn assert_minimum_receive_token() {
         &[(&"addr0000".to_string(), &Uint128::from(1000000u128))],
     )]);
 
-    let info = mock_info("addr0000", &[]);
+    let info = mock_info(MOCK_CONTRACT_ADDR, &[]);
     // success
     let msg = ExecuteMsg::AssertMinimumReceive {
         asset_info: AssetInfo::Token {

@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2, USER_1};
+    use crate::tests::env_setup::env::{
+        instantiate_contracts, ADMIN, NATIVE_DENOM, NATIVE_DENOM_2, USER_1,
+    };
     use bignumber::Decimal256;
     use cosmwasm_std::{
         from_binary, to_binary, Addr, BalanceResponse as BankBalanceResponse, BankQuery, Coin,
@@ -19,12 +21,6 @@ mod tests {
     const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
     const MOCK_TRANSACTION_FEE: u128 = 5000;
 
-    // This module to verify Native Token works with cw20-token
-    // USER_1 Mint 1000 tokens to HALO Token
-    // USER_1 Create Pair: AURA - HALO Token
-    // USER_1 Add Liquidity: 1000 AURA - 1000 HALO Token
-    // USER_1 Swap: 1000 AURA -> HALO Token
-    // USER_1 Withdraw Liquidity: 1000 AURA - 1000 HALO Token
     mod execute_contract_native_with_cw20_token {
         use std::str::FromStr;
 
@@ -37,7 +33,12 @@ mod tests {
         };
 
         use super::*;
-
+        // This module to verify Native Token works with cw20-token
+        // USER_1 Mint 1000 tokens to HALO Token
+        // USER_1 Create Pair: AURA - HALO Token
+        // USER_1 Add Liquidity: 1000 AURA - 1000 HALO Token
+        // USER_1 Swap: 1000 AURA -> HALO Token
+        // USER_1 Withdraw Liquidity: 1000 AURA - 1000 HALO Token
         #[test]
         fn proper_operation() {
             // get integration test app and contracts
@@ -565,6 +566,431 @@ mod tests {
                 // and 10000 utaura native token for transaction fee
                 Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT - 2u128 - MOCK_TRANSACTION_FEE * 2)
             );
+        }
+
+        // Mint 1000 native tokens NATIVE_DENOM to USER_1
+        // Mint 1000 native tokens NATIVE_DENOM_2 to USER_1
+        // Mint 1000 HALO tokens to USER_1
+        // Add Native Token Decimals is 6 for NATIVE_DENOM and NATIVE_DENOM_2
+        // Create Pair: NATIVE_DENOM - HALO Token
+        // Create Pair: NATIVE_DENOM_2 - HALO Token
+        // Create Pair: NATIVE_DENOM - NATIVE_DENOM_2
+        // Update Native Token Decimals is 8 for NATIVE_DENOM and 9 NATIVE_DENOM_2
+        // Query Native Token Decimals for NATIVE_DENOM and NATIVE_DENOM_2 on all pairs
+        // and it should be [8,9] for [NATIVE_DENOM, NATIVE_DENOM_2]
+        #[test]
+        fn update_native_token_decimals_for_pairs() {
+            // get integration test app and contracts
+            let (mut app, contracts) = instantiate_contracts();
+            // Get factory contract
+            let factory_contract = contracts[0].contract_addr.clone();
+            // Get cw20 token contract
+            let cw20_token_contract = contracts[2].contract_addr.clone();
+
+            // Mint 1000 native tokens NATIVE_DENOM to USER_1
+            app.sudo(cw_multi_test::SudoMsg::Bank(
+                cw_multi_test::BankSudo::Mint {
+                    to_address: USER_1.to_string(),
+                    amount: vec![Coin {
+                        amount: Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT),
+                        denom: NATIVE_DENOM.to_string(),
+                    }],
+                },
+            ))
+            .unwrap();
+
+            // Mint 1000 native tokens NATIVE_DENOM_2 to USER_1
+            app.sudo(cw_multi_test::SudoMsg::Bank(
+                cw_multi_test::BankSudo::Mint {
+                    to_address: USER_1.to_string(),
+                    amount: vec![Coin {
+                        amount: Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT),
+                        denom: NATIVE_DENOM_2.to_string(),
+                    }],
+                },
+            ))
+            .unwrap();
+
+            // Mint 1000 HALO tokens to USER_1
+            let mint_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Mint {
+                recipient: USER_1.to_string(),
+                amount: Uint128::from(MOCK_1000_HALO_TOKEN_AMOUNT),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(cw20_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+            assert!(response.is_ok());
+
+            // Add Native Token Decimals for NATIVE_DENOM
+            let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM.to_string(),
+                decimals: 6u8,
+            };
+
+            // Execute add native token decimals
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+            assert!(response.is_ok());
+
+            // Add Native Token Decimals for NATIVE_DENOM_2
+            let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM_2.to_string(),
+                decimals: 6u8,
+            };
+
+            // Execute add native token decimals
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Assert decimals of native token of NATIVE_DENOM
+            let response: NativeTokenDecimalsResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::NativeTokenDecimals {
+                        denom: NATIVE_DENOM.to_string(),
+                    },
+                )
+                .unwrap();
+            assert_eq!(response.decimals, 6u8);
+
+            // Assert decimals of native token of NATIVE_DENOM_2
+            let response: NativeTokenDecimalsResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::NativeTokenDecimals {
+                        denom: NATIVE_DENOM_2.to_string(),
+                    },
+                )
+                .unwrap();
+            assert_eq!(response.decimals, 6u8);
+
+            // Create Pair: NATIVE_DENOM - HALO Token
+            let asset_infos = [
+                AssetInfo::NativeToken {
+                    denom: NATIVE_DENOM.to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: cw20_token_contract.clone(),
+                },
+            ];
+
+            let create_pair_msg = FactoryExecuteMsg::CreatePair {
+                asset_infos,
+                requirements: CreatePairRequirements {
+                    whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                    first_asset_minimum: Uint128::zero(),
+                    second_asset_minimum: Uint128::zero(),
+                },
+                commission_rate: Some(Decimal256::from_str("0.03").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "UAURA-HALO".to_string(),
+                    lp_token_symbol: "UAURA-HALO".to_string(),
+                    lp_token_decimals: None,
+                },
+            };
+
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &create_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(500000u128),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: cw20_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM in Pair
+            assert_eq!(response.asset_decimals, [6u8, 6u8]);
+
+            // Create Pair: NATIVE_DENOM_2 - HALO Token
+            let asset_infos = [
+                AssetInfo::NativeToken {
+                    denom: NATIVE_DENOM_2.to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: cw20_token_contract.clone(),
+                },
+            ];
+
+            let create_pair_msg = FactoryExecuteMsg::CreatePair {
+                asset_infos,
+                requirements: CreatePairRequirements {
+                    whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                    first_asset_minimum: Uint128::zero(),
+                    second_asset_minimum: Uint128::zero(),
+                },
+                commission_rate: Some(Decimal256::from_str("0.03").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "UTAURA-HALO".to_string(),
+                    lp_token_symbol: "UTAURA-HALO".to_string(),
+                    lp_token_decimals: None,
+                },
+            };
+
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &create_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(500000u128),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM_2.to_string(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: cw20_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM_2 in Pair
+            assert_eq!(response.asset_decimals, [6u8, 6u8]);
+
+            // Create Pair: NATIVE_DENOM - NATIVE_DENOM_2
+            let asset_infos = [
+                AssetInfo::NativeToken {
+                    denom: NATIVE_DENOM.to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: NATIVE_DENOM_2.to_string(),
+                },
+            ];
+
+            let create_pair_msg = FactoryExecuteMsg::CreatePair {
+                asset_infos,
+                requirements: CreatePairRequirements {
+                    whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                    first_asset_minimum: Uint128::zero(),
+                    second_asset_minimum: Uint128::zero(),
+                },
+                commission_rate: Some(Decimal256::from_str("0.03").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "UAURA-UTAURA".to_string(),
+                    lp_token_symbol: "UAURA-UTAURA".to_string(),
+                    lp_token_decimals: None,
+                },
+            };
+
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &create_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(500000u128),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM_2.to_string(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
+            assert_eq!(response.asset_decimals, [6u8, 6u8]);
+
+            // Add Native Token Decimals for NATIVE_DENOM
+            let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM.to_string(),
+                decimals: 8u8,
+            };
+
+            // Execute add native token decimals
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Add Native Token Decimals for NATIVE_DENOM_2
+            let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM_2.to_string(),
+                decimals: 9u8,
+            };
+
+            // Execute add native token decimals
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query NATIVE_DENOM - HALO Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: cw20_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM in Pair
+            assert_eq!(response.asset_decimals, [8u8, 6u8]);
+
+            // Query NATIVE_DENOM_2 - HALO Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM_2.to_string(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: cw20_token_contract,
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM_2 in Pair
+            assert_eq!(response.asset_decimals, [9u8, 6u8]);
+
+            // Query NATIVE_DENOM - NATIVE_DENOM_2 Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract,
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM_2.to_string(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
+            assert_eq!(response.asset_decimals, [8u8, 9u8]);
+
+            // Query Pair of NATIVE_DENOM - HALO Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pair {})
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM in Pair
+            assert_eq!(response.asset_decimals, [8u8, 6u8]);
+
+            // Query Pair of NATIVE_DENOM_2 - HALO Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart("contract5".to_string(), &QueryMsg::Pair {})
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM_2 in Pair
+            assert_eq!(response.asset_decimals, [9u8, 6u8]);
+
+            // Query Pair of NATIVE_DENOM - NATIVE_DENOM_2 Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart("contract7".to_string(), &QueryMsg::Pair {})
+                .unwrap();
+
+            // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
+            assert_eq!(response.asset_decimals, [8u8, 9u8]);
         }
     }
 }

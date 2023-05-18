@@ -37,6 +37,11 @@ pub enum ExecuteMsg {
         max_spread: Option<Decimal>,
         to: Option<String>,
     },
+    /// Update native token decimals of the pair
+    UpdateNativeTokenDecimals {
+        denom: String,
+        asset_decimals: [u8; 2],
+    },
 }
 
 #[cw_serde]
