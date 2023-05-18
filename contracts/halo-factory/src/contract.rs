@@ -211,7 +211,7 @@ pub fn execute_add_native_token_decimals(
     decimals: u8,
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut res: Response = Response::new();
     let is_native_exist: bool = ALLOW_NATIVE_TOKENS
         .may_load(deps.storage, denom.as_bytes())?
         .is_some();
@@ -236,6 +236,9 @@ pub fn execute_add_native_token_decimals(
 
     // If the native token is already exist, then update the decimals for the existing pairs
     if is_native_exist {
+        // Messages to update the native token decimals for the existing pairs
+        let mut messages: Vec<CosmosMsg> = vec![];
+
         for pair_info in pair_infos {
             // Get the pair key from the pair info
             let pair_key = pair_key(&[
@@ -301,13 +304,16 @@ pub fn execute_add_native_token_decimals(
                 }));
             }
         }
+        res = res.add_messages(messages);
     }
 
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
+    res = res.add_attributes(vec![
         ("action", "add_allow_native_token"),
         ("denom", &denom),
         ("decimals", &decimals.to_string()),
-    ]))
+    ]);
+
+    Ok(res)
 }
 
 pub fn execute_migrate_pair(

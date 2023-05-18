@@ -52,7 +52,7 @@ pub fn instantiate(
     CONFIG.save(
         deps.storage,
         &Config {
-            halo_factory: deps.api.addr_canonicalize(info.sender.as_str())?,
+            halo_factory: info.sender,
         },
     )?;
 
@@ -490,7 +490,7 @@ pub fn update_native_token_decimals(
     let config: Config = CONFIG.load(deps.storage)?;
 
     // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.halo_factory {
+    if info.sender.as_str() != config.halo_factory {
         return Err(ContractError::Unauthorized {});
     }
 

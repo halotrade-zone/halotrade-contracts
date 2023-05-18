@@ -1,12 +1,12 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::CanonicalAddr;
+use cosmwasm_std::Addr;
 use cw_storage_plus::Item;
 use haloswap::asset::PairInfoRaw;
 
 #[cw_serde]
 pub struct Config {
-    pub halo_factory: CanonicalAddr,
+    pub halo_factory: Addr,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
