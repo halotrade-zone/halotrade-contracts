@@ -307,13 +307,11 @@ pub fn execute_add_native_token_decimals(
         res = res.add_messages(messages);
     }
 
-    res = res.add_attributes(vec![
+    Ok(res.add_attributes(vec![
         ("action", "add_allow_native_token"),
         ("denom", &denom),
         ("decimals", &decimals.to_string()),
-    ]);
-
-    Ok(res)
+    ]))
 }
 
 pub fn execute_migrate_pair(
