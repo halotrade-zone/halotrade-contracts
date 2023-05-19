@@ -113,17 +113,22 @@ pub fn execute_update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
-// Anyone can execute it to create swap pair
+// Only owner of the factory can execute it to create swap pair
 pub fn execute_create_pair(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     requirements: CreatePairRequirements,
     commission_rate: Option<Decimal256>,
     lp_token_info: LPTokenInfo,
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
+
+    // permission check
+    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
 
     // don't allow to create pair with same token
     if asset_infos[0] == asset_infos[1] {
