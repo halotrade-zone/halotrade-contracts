@@ -288,6 +288,39 @@ fn create_pair() {
         ),
         _ => panic!("DO NOT ENTER HERE"),
     }
+
+    // fail to create pair with invalid factory owner
+    let asset_infos3 = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: asset_infos3,
+        requirements: CreatePairRequirements {
+            whitelist: vec![Addr::unchecked("deployer")],
+            first_asset_minimum: Uint128::zero(),
+            second_asset_minimum: Uint128::zero(),
+        },
+        commission_rate: Some(Decimal256::one() + Decimal256::one()),
+        lp_token_info: LPTokenInfo {
+            lp_token_name: "uusd_mAAPL_LP".to_string(),
+            lp_token_symbol: "uusd_mAAPL_LP".to_string(),
+            lp_token_decimals: None,
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0001", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
+    match res {
+        StdError::GenericErr { msg, .. } => assert_eq!(msg, "unauthorized"),
+        _ => panic!("DO NOT ENTER HERE"),
+    }
 }
 
 #[test]

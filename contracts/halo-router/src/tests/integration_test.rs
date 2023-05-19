@@ -24,7 +24,7 @@ mod tests {
     mod execute_contract_native_with_cw20_token {
         use std::str::FromStr;
 
-        use cosmwasm_std::Querier;
+        use cosmwasm_std::{Querier, StdError};
         use cw_multi_test::Executor;
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
