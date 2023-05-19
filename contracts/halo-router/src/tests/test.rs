@@ -963,7 +963,7 @@ fn assert_minimum_receive_token() {
         receiver: "addr0000".to_string(),
     };
 
-    let res = execute(deps.as_mut(), mock_env(), info.clone(), msg);
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
     match res {
         Err(StdError::GenericErr { msg, .. }) => assert_eq!(
             msg,
