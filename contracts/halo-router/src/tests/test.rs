@@ -951,6 +951,26 @@ fn assert_minimum_receive_token() {
         ),
         _ => panic!("DO NOT ENTER HERE"),
     }
+
+    // assertion failed; unauthorized sender
+    let info = mock_info("addr000", &[]);
+    let msg = ExecuteMsg::AssertMinimumReceive {
+        asset_info: AssetInfo::Token {
+            contract_addr: "token0000".to_string(),
+        },
+        prev_balance: Uint128::zero(),
+        minimum_receive: Uint128::from(1000000u128),
+        receiver: "addr0000".to_string(),
+    };
+
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
+    match res {
+        Err(StdError::GenericErr { msg, .. }) => assert_eq!(
+            msg,
+            "unauthorized: assert_minium_receive only can be called by contract itself"
+        ),
+        _ => panic!("DO NOT ENTER HERE"),
+    }
 }
 
 #[test]

@@ -577,6 +577,7 @@ mod tests {
         // Create Pair: NATIVE_DENOM - NATIVE_DENOM_2
         // Update Native Token Decimals is 8 for NATIVE_DENOM and 9 NATIVE_DENOM_2
         // Query Native Token Decimals for NATIVE_DENOM and NATIVE_DENOM_2 on all pairs
+        // for both halo-factory and halo-pair contracts
         // and it should be [8,9] for [NATIVE_DENOM, NATIVE_DENOM_2]
         #[test]
         fn update_native_token_decimals_for_pairs() {
