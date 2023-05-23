@@ -341,7 +341,8 @@ fn provide_liquidity() {
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     let transfer_from_msg = res.messages.get(0).expect("no message");
-    let mint_msg = res.messages.get(1).expect("no message");
+    let mint_for_liquidity0000_msg = res.messages.get(1).expect("no message");
+    let mint_for_addr0000_msg = res.messages.get(2).expect("no message");
     assert_eq!(
         transfer_from_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -356,13 +357,27 @@ fn provide_liquidity() {
         }))
     );
     assert_eq!(
-        mint_msg,
+        mint_for_liquidity0000_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
-                // Verify minting 1 reserve LP token to lp token
+                // Verify minting 1 reserve LP token to lp token contract address
                 recipient: "liquidity0000".to_string(),
                 amount: Uint128::from(1u128),
+            })
+            .unwrap(),
+            funds: vec![],
+        }))
+    );
+    assert_eq!(
+        mint_for_addr0000_msg,
+        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "liquidity0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Mint {
+                recipient: "addr0000".to_string(),
+                // addr0000 will receive 100 - 1 share of LP token
+                // because 1 share of LP token is minted to lp token contract address
+                amount: Uint128::from(99u128),
             })
             .unwrap(),
             funds: vec![],
@@ -479,7 +494,8 @@ fn provide_liquidity() {
             contract_addr: "liquidity0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "staking0000".to_string(),
-                amount: Uint128::from(49u128), // 1uLP reserved token sent to contract
+                // staking0000 will receive 50 share of LP token (100 * (100 / 200))
+                amount: Uint128::from(50u128),
             })
             .unwrap(),
             funds: vec![],
