@@ -284,7 +284,7 @@ pub fn provide_liquidity(
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
 
     // calculate the amount of LP token is minted to the user
-    let share =
+    let mut share =
         calculate_lp_token_amount_to_user(&info, &pair_info, total_share, deposits, pools).unwrap();
 
     // prevent providing free token (one of the deposits is zero)
@@ -312,6 +312,7 @@ pub fn provide_liquidity(
             })?,
             funds: vec![],
         }));
+        share = share.checked_sub(Uint128::from(LP_TOKEN_RESERVED_AMOUNT))?;
     }
 
     // mint amount of 'share' LP token to the receiver
@@ -322,7 +323,7 @@ pub fn provide_liquidity(
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
             recipient: receiver.to_string(),
-            amount: share - Uint128::from(LP_TOKEN_RESERVED_AMOUNT),
+            amount: share,
         })?,
         funds: vec![],
     }));
