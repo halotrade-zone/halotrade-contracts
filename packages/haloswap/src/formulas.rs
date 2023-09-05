@@ -97,11 +97,9 @@ pub fn compute_swap(
 
     // calculate the spread_amount
     // hoanm: EQUATION - SPREAD = (A * \frac{R_B}{R_A}) - B
-    let spread_amount: Uint256 =
-        (Decimal256::from_ratio(
-                ask_pool * offer_amount,
-                offer_pool) * Uint256::one()
-            ) - return_amount;
+    let spread_amount: Uint256 = (Decimal256::from_ratio(ask_pool * offer_amount, offer_pool)
+        * Uint256::one())
+        - return_amount;
 
     // calculate the commission_amount
     let commission_amount: Uint256 = return_amount * commission_rate;

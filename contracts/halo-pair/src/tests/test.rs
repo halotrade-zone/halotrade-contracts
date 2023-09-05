@@ -1044,7 +1044,6 @@ fn try_token_to_native() {
     let total_share = Uint128::from(20_000_000_000u128);
     let asset_pool_amount = Uint128::from(30_000_000_000u128);
     let collateral_pool_amount = Uint128::from(20_000_000_000u128);
-    let exchange_rate = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
     let offer_amount = Uint128::from(1_500_000_000u128);
 
     let mut deps = mock_dependencies(&[Coin {

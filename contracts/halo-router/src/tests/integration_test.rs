@@ -1011,8 +1011,6 @@ mod tests {
             let factory_contract = contracts[0].contract_addr.clone();
             // Get router contract
             let router_contract = contracts[1].contract_addr.clone();
-            // Get halo token contract
-            let halo_token_contract = contracts[2].contract_addr.clone();
             // Get MSTR token contract
             let mstr_token_contract = contracts[3].contract_addr.clone();
 
@@ -1262,9 +1260,6 @@ mod tests {
 
             println!("RESPONSEEE: {:?}", response);
             assert!(response.is_ok());
-
-
         }
-
     }
 }
