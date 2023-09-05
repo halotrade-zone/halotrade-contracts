@@ -177,14 +177,121 @@ fn test_compute_swap_with_huge_pool_variance() {
     let offer_pool = Uint128::from(395451850234u128);
     let ask_pool = Uint128::from(317u128);
 
+    // compute swap return value
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool,
+        ask_pool,
+        Uint128::from(1u128),
+        Decimal256::from_str("0.03").unwrap(),
+    );
+
+    assert_eq!(return_amount, Uint128::zero());
+    assert_eq!(spread_amount, Uint128::zero());
+    assert_eq!(commission_amount, Uint128::zero());
+}
+
+#[test]
+fn test_compute_swap_with_huge_offer_pool() {
+    use std::str::FromStr;
+
+    // offer pool is max value of Uint128
+    let offer_pool = Uint128::from(340282366920938463463374607431768211455u128);
+    // ask pool is 1
+    let ask_pool = Uint128::from(1u128);
+
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool,
+        ask_pool,
+        Uint128::from(1u128),
+        Decimal256::from_str("0.03").unwrap(),
+    );
+
+    assert_eq!(return_amount, Uint128::zero());
+    assert_eq!(spread_amount, Uint128::zero());
+    assert_eq!(commission_amount, Uint128::zero());
+}
+
+#[test]
+fn test_compute_swap_with_huge_ask_pool() {
+    use std::str::FromStr;
+
+    // offer pool is 1
+    let offer_pool = Uint128::from(1u128);
+    // ask pool is max value of Uint128
+    let ask_pool = Uint128::from(340282366920938463463374607431768211455u128);
+
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool,
+        ask_pool,
+        Uint128::from(1u128),
+        Decimal256::from_str("0.03").unwrap(),
+    );
+
     assert_eq!(
-        compute_swap(
-            offer_pool,
-            ask_pool,
-            Uint128::from(1u128),
-            Decimal256::from_str("0.03").unwrap()
-        )
-        .0,
-        Uint128::zero()
+        return_amount,
+        Uint128::from(165036947956655154779736684604407582556u128)
+    );
+    assert_eq!(
+        spread_amount,
+        Uint128::from(170141183460469231731687303715884105728u128)
+    );
+    assert_eq!(
+        commission_amount,
+        Uint128::from(5104235503814076951950619111476523171u128)
+    );
+}
+
+// For calculate accurately this contract is using Decimal256 type for division calculations
+// So the maximum value when offer_pool and ask_pool are multiplied
+// is the maximum value of Decimal256:
+// 115792089237316195423570985008687907853269984665640564039457.584007913129639935 (which is (2^128 - 1) / 10^18)
+#[test]
+fn test_compute_swap_with_huge_ask_pool_and_offer_pool() {
+    use std::str::FromStr;
+
+    // offer pool is root of max value of Decimal256
+    let offer_pool = Uint128::from(340282366920938463463374607431u128);
+    // ask pool is root of max value of Decimal256
+    let ask_pool = Uint128::from(340282366920938463463374607431u128);
+
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool,
+        ask_pool,
+        Uint128::from(1u128),
+        Decimal256::from_str("0.03").unwrap(),
+    );
+
+    assert_eq!(return_amount, Uint128::one());
+    assert_eq!(spread_amount, Uint128::zero());
+    assert_eq!(commission_amount, Uint128::zero());
+}
+
+#[test]
+fn test_compute_swap_with_huge_ask_pool_and_offer_pool_and_offer_amount() {
+    use std::str::FromStr;
+
+    // offer pool is root of max value of Decimal256
+    let offer_pool = Uint128::from(340282366920938463463374607431u128);
+    // ask pool is root of max value of Decimal256
+    let ask_pool = Uint128::from(340282366920938463463374607431u128);
+
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool,
+        ask_pool,
+        Uint128::from(340282366920938463463374607431u128),
+        Decimal256::from_str("0.03").unwrap(),
+    );
+
+    assert_eq!(
+        return_amount,
+        Uint128::from(165036947956655154779736684604u128)
+    );
+    assert_eq!(
+        spread_amount,
+        Uint128::from(170141183460469231731687303716u128)
+    );
+    assert_eq!(
+        commission_amount,
+        Uint128::from(5104235503814076951950619111u128)
     );
 }
