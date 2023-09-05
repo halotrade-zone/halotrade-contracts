@@ -20,6 +20,9 @@ mod tests {
     // Mock information for native token
     const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
     const MOCK_TRANSACTION_FEE: u128 = 5000;
+    // Decimal macros
+    const DECIMAL_FRACTIONAL_6: u128 = 1_000_000u128;
+    const DECIMAL_FRACTIONAL_18: u128 = 1_000_000_000_000_000_000u128;
 
     mod execute_contract_native_with_cw20_token {
         use std::str::FromStr;
@@ -47,7 +50,7 @@ mod tests {
             let factory_contract = contracts[0].contract_addr.clone();
             // Get router contract
             let router_contract = contracts[1].contract_addr.clone();
-            // Get cw20 token contract
+            // Get halo token contract
             let cw20_token_contract = contracts[2].contract_addr.clone();
 
             // Mint 1000 native tokens NATIVE_DENOM_2 to USER_1
@@ -212,7 +215,7 @@ mod tests {
             assert_eq!(
                 response,
                 PairInfo {
-                    liquidity_token: "contract4".to_string(),
+                    liquidity_token: "contract5".to_string(),
                     asset_infos: [
                         AssetInfo::NativeToken {
                             denom: NATIVE_DENOM_2.to_string(),
@@ -221,7 +224,7 @@ mod tests {
                             contract_addr: cw20_token_contract.clone(),
                         },
                     ],
-                    contract_addr: "contract3".to_string(), // Pair Contract
+                    contract_addr: "contract4".to_string(), // Pair Contract
                     asset_decimals: [6u8, 6u8],
                     requirements: CreatePairRequirements {
                         whitelist: vec![Addr::unchecked(USER_1.to_string())],
@@ -236,7 +239,7 @@ mod tests {
             // Query LP Token Info
             let response: TokenInfoResponse = app
                 .wrap()
-                .query_wasm_smart("contract4".to_string(), &cw20::Cw20QueryMsg::TokenInfo {})
+                .query_wasm_smart("contract5".to_string(), &cw20::Cw20QueryMsg::TokenInfo {})
                 .unwrap();
 
             // Assert LP Token Info
@@ -254,7 +257,7 @@ mod tests {
             // create provide liquidity message
             // Approve cw20 token to pair contract
             let approve_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::IncreaseAllowance {
-                spender: "contract3".to_string(), // Pair Contract
+                spender: "contract4".to_string(), // Pair Contract
                 amount: Uint128::from(2_000_000u128),
                 expires: None,
             };
@@ -294,20 +297,20 @@ mod tests {
 
             let response = app.execute_contract(
                 Addr::unchecked(USER_1.to_string()),
-                Addr::unchecked("contract3".to_string()),
+                Addr::unchecked("contract4".to_string()),
                 &provide_liquidity_msg,
                 &[Coin {
                     amount: Uint128::from(2_000_000u128),
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
-
+            println!("{:?}", response);
             assert!(response.is_ok());
 
             // Query Pool
             let response: PoolResponse = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pool {})
+                .query_wasm_smart("contract4".to_string(), &QueryMsg::Pool {})
                 .unwrap();
 
             // Assert Pool: total_share amount
@@ -337,7 +340,7 @@ mod tests {
             let response: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
-                    "contract4".to_string(),
+                    "contract5".to_string(),
                     &Cw20QueryMsg::Balance {
                         address: USER_1.to_string(),
                     },
@@ -356,9 +359,9 @@ mod tests {
             let response: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
-                    "contract4".to_string(),
+                    "contract5".to_string(),
                     &Cw20QueryMsg::Balance {
-                        address: "contract4".to_string(),
+                        address: "contract5".to_string(),
                     },
                 )
                 .unwrap();
@@ -400,7 +403,7 @@ mod tests {
             // Query Pool
             let response: PoolResponse = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pool {})
+                .query_wasm_smart("contract4".to_string(), &QueryMsg::Pool {})
                 .unwrap();
 
             // Assert Pool: total_share amount
@@ -464,7 +467,7 @@ mod tests {
             // USER 1 Withdraw Liquidity
             // Send LP token to Pair Contract
             let send_lp_token_msg = Cw20ExecuteMsg::Send {
-                contract: "contract3".to_string(),
+                contract: "contract4".to_string(),
                 amount: Uint128::from(1414212u128),
                 msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
             };
@@ -472,7 +475,7 @@ mod tests {
             // Execute Send LP token to Pair Contract
             let response = app.execute_contract(
                 Addr::unchecked(USER_1.to_string()),
-                Addr::unchecked("contract4".to_string()),
+                Addr::unchecked("contract5".to_string()),
                 &send_lp_token_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
@@ -485,7 +488,7 @@ mod tests {
             // Query Pool
             let response: PoolResponse = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pool {})
+                .query_wasm_smart("contract4".to_string(), &QueryMsg::Pool {})
                 .unwrap();
 
             // Assert Pool: total_share amount
@@ -517,7 +520,7 @@ mod tests {
             let response: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
-                    "contract4".to_string(),
+                    "contract5".to_string(),
                     &Cw20QueryMsg::Balance {
                         address: USER_1.to_string(),
                     },
@@ -969,7 +972,7 @@ mod tests {
             // Query Pair of NATIVE_DENOM - HALO Pair
             let response: PairInfo = app
                 .wrap()
-                .query_wasm_smart("contract3".to_string(), &QueryMsg::Pair {})
+                .query_wasm_smart("contract4".to_string(), &QueryMsg::Pair {})
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
@@ -978,7 +981,7 @@ mod tests {
             // Query Pair of NATIVE_DENOM_2 - HALO Pair
             let response: PairInfo = app
                 .wrap()
-                .query_wasm_smart("contract5".to_string(), &QueryMsg::Pair {})
+                .query_wasm_smart("contract6".to_string(), &QueryMsg::Pair {})
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
@@ -987,11 +990,281 @@ mod tests {
             // Query Pair of NATIVE_DENOM - NATIVE_DENOM_2 Pair
             let response: PairInfo = app
                 .wrap()
-                .query_wasm_smart("contract7".to_string(), &QueryMsg::Pair {})
+                .query_wasm_smart("contract8".to_string(), &QueryMsg::Pair {})
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM and NATIVE_DENOM_2 in Pair
             assert_eq!(response.asset_decimals, [8u8, 9u8]);
         }
+
+        // Mint 500_000 MSTR tokens to USER_1
+        // Mint 50_000 NATIVE_DENOM tokens to USER_1
+        // Add Native Token Decimals is 6 for NATIVE_DENOM
+        // Create Pair: MSTR - NATIVE_DENOM Token
+        // USER_1 Add Liquidity: 49_867_841_058 AURA - 494_676_638_256_289_699_505_510 MSTR Token
+        // USER_1 Swap: 0.49 MSTR -> AURA Token
+        #[test]
+        fn test_swap_cw20_decimal_18_with_native_decimal_6() {
+            // get integration test app and contracts
+            let (mut app, contracts) = instantiate_contracts();
+            // Get factory contract
+            let factory_contract = contracts[0].contract_addr.clone();
+            // Get router contract
+            let router_contract = contracts[1].contract_addr.clone();
+            // Get halo token contract
+            let halo_token_contract = contracts[2].contract_addr.clone();
+            // Get MSTR token contract
+            let mstr_token_contract = contracts[3].contract_addr.clone();
+
+            // Mint 500_000 MSTR tokens to USER_1
+            let mint_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Mint {
+                recipient: USER_1.to_string(),
+                amount: Uint128::from(500_000u128 * DECIMAL_FRACTIONAL_18),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(mstr_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Mint 50_000 NATIVE_DENOM tokens to USER_1
+            app.sudo(cw_multi_test::SudoMsg::Bank(
+                cw_multi_test::BankSudo::Mint {
+                    to_address: USER_1.to_string(),
+                    amount: vec![Coin {
+                        amount: Uint128::from(50_000u128 * DECIMAL_FRACTIONAL_6),
+                        denom: NATIVE_DENOM.to_string(),
+                    }],
+                },
+            ))
+            .unwrap();
+
+            // Add Native Token Decimals for NATIVE_DENOM
+            let msg = FactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM.to_string(),
+                decimals: 6u8,
+            };
+
+            // Execute add native token decimals
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Create Pair: MSTR - NATIVE_DENOM Token
+            let asset_infos = [
+                AssetInfo::Token {
+                    contract_addr: mstr_token_contract.clone(),
+                },
+                AssetInfo::NativeToken {
+                    denom: NATIVE_DENOM.to_string(),
+                },
+            ];
+
+            let create_pair_msg = FactoryExecuteMsg::CreatePair {
+                asset_infos,
+                requirements: CreatePairRequirements {
+                    whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                    first_asset_minimum: Uint128::zero(),
+                    second_asset_minimum: Uint128::zero(),
+                },
+                commission_rate: Some(Decimal256::from_str("0.03").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "MSTR-AURA".to_string(),
+                    lp_token_symbol: "MSTR-AURA".to_string(),
+                    lp_token_decimals: None,
+                },
+            };
+
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &create_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(500000u128),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract.clone(),
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::Token {
+                                contract_addr: mstr_token_contract.clone(),
+                            },
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert Pair
+            assert_eq!(
+                response,
+                PairInfo {
+                    liquidity_token: "contract5".to_string(),
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: mstr_token_contract.clone(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM.to_string(),
+                        },
+                    ],
+                    contract_addr: "contract4".to_string(), // Pair Contract
+                    asset_decimals: [18u8, 6u8],
+                    requirements: CreatePairRequirements {
+                        whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                        first_asset_minimum: Uint128::zero(),
+                        second_asset_minimum: Uint128::zero(),
+                    },
+                    // Verify the default commission rate is 0.3%
+                    commission_rate: Decimal256::from_str("0.03").unwrap(),
+                }
+            );
+
+            // provide liquidity
+            // create provide liquidity message
+            // Approve cw20 token to pair contract
+            let approve_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::IncreaseAllowance {
+                spender: "contract4".to_string(), // Pair Contract
+                amount: Uint128::from(900_000u128 * DECIMAL_FRACTIONAL_18),
+                expires: None,
+            };
+
+            // Execute approve
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked(mstr_token_contract.clone()),
+                &approve_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // USER_1 Provide Liquidity
+            let provide_liquidity_msg = ExecuteMsg::ProvideLiquidity {
+                assets: [
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: mstr_token_contract.clone(),
+                        },
+                        amount: Uint128::from(494676638256289699505510u128),
+                    },
+                    Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM.to_string(),
+                        },
+                        amount: Uint128::from(49867841058u128),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
+
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked("contract4".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(49867841058u128),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Pool
+            let response: PoolResponse = app
+                .wrap()
+                .query_wasm_smart("contract4".to_string(), &QueryMsg::Pool {})
+                .unwrap();
+
+            // Assert Pool
+            assert_eq!(
+                response,
+                PoolResponse {
+                    assets: [
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: mstr_token_contract.clone(),
+                            },
+                            amount: Uint128::from(494676638256289699505510u128),
+                        },
+                        Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                            amount: Uint128::from(49867841058u128),
+                        },
+                    ],
+                    total_share: Uint128::from(157061949471125618u128),
+                }
+            );
+
+            // Swap MSTR to AURA
+            let msg = RouterExecuteMsg::ExecuteSwapOperations {
+                operations: vec![SwapOperation::HaloSwap {
+                    offer_asset_info: AssetInfo::Token {
+                        contract_addr: mstr_token_contract.clone(),
+                    },
+                    ask_asset_info: AssetInfo::NativeToken {
+                        denom: NATIVE_DENOM.to_string(),
+                    },
+                }],
+                minimum_receive: Some(Uint128::from(46937u128)),
+                to: None,
+            };
+
+            // Send 0.49 MSTR to Router Contract
+            let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
+                contract: router_contract.clone(),
+                amount: Uint128::from(480000000000000000u128),
+                msg: to_binary(&msg).unwrap(),
+            };
+
+            // Execute send
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked(mstr_token_contract.clone()),
+                &send_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            println!("RESPONSEEE: {:?}", response);
+            assert!(response.is_ok());
+
+
+        }
+
     }
 }

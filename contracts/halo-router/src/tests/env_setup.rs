@@ -44,6 +44,11 @@ pub mod env {
     pub const HALO_TOKEN_DECIMALS: u8 = 18;
     pub const HALO_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000u128;
 
+    pub const MSTR_TOKEN_SYMBOL: &str = "MSTR";
+    pub const MSTR_TOKEN_NAME: &str = "MSTR Token";
+    pub const MSTR_TOKEN_DECIMALS: u8 = 18;
+    pub const MSTR_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000_000_000_000u128;
+
     pub struct ContractInfo {
         pub contract_addr: String,
         pub contract_code_id: u64,
@@ -221,6 +226,36 @@ pub mod env {
         // add contract info to the vector
         contract_info_vec.push(ContractInfo {
             contract_addr: halo_token_contract_addr.to_string(),
+            contract_code_id: halo_token_contract_code_id,
+        });
+
+        // create instantiate message for contract
+        let mstr_token_contract_instantiate_msg = HaloTokenInstantiateMsg {
+            name: MSTR_TOKEN_NAME.to_string(),
+            symbol: MSTR_TOKEN_SYMBOL.to_string(),
+            decimals: MSTR_TOKEN_DECIMALS,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                minter: ADMIN.to_string(), // the minter of the cw20 token must be the marketplace contract
+                cap: Some(Uint128::new(MSTR_TOKEN_INITIAL_SUPPLY)),
+            }),
+        };
+
+        // instantiate contract
+        let mstr_token_contract_addr = app
+            .instantiate_contract(
+                halo_token_contract_code_id,
+                Addr::unchecked(ADMIN),
+                &mstr_token_contract_instantiate_msg,
+                &[],
+                "test instantiate contract",
+                None,
+            )
+            .unwrap();
+
+        // add contract info to the vector
+        contract_info_vec.push(ContractInfo {
+            contract_addr: mstr_token_contract_addr.to_string(),
             contract_code_id: halo_token_contract_code_id,
         });
 

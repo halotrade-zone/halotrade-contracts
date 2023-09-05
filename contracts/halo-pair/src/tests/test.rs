@@ -1226,7 +1226,7 @@ fn try_token_to_native() {
     // current price is 1.5, so expected return without spread is 1000
     // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500)
     let expected_ret_amount = Uint128::from(952_380_952u128);
-    let expected_spread_amount = (offer_amount * exchange_rate)
+    let expected_spread_amount = (collateral_pool_amount * offer_amount / asset_pool_amount)
         .checked_sub(expected_ret_amount)
         .unwrap();
     let expected_commission_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
