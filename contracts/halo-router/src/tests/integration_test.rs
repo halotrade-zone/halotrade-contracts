@@ -28,7 +28,6 @@ mod tests {
         use std::str::FromStr;
 
         use cosmwasm_std::Querier;
-        use cw20::Cw20ReceiveMsg;
         use cw_multi_test::Executor;
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
@@ -1498,7 +1497,7 @@ mod tests {
             // Send 340282366919999999999999999999 LP Token to Pair Contract
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
-                amount: Uint128::from(user_1_lp_response.balance),
+                amount: user_1_lp_response.balance,
                 msg: to_binary(&msg).unwrap(),
             };
 
