@@ -1265,7 +1265,8 @@ mod tests {
         // Mint 340_282_366_921 + 2 USDC tokens to USER_1
         // Create Pair: MSTR - USDC Token
         // USER_1 Successfully Add Liquidity: 2 MSTR - 2 USDC Token for initial liquidity
-        // USER_1 Fail to Add Liquidity: 340_282_366_921 MSTR - 340_282_366_921 USDC Token with error: Exceed Max Value
+        // USER_1 Fail to Add Liquidity: 340_282_366_921 MSTR - 340_282_366_921 USDC Token with panic:
+        // "arithmetic operation overflow"
         #[test]
         #[should_panic(expected = "arithmetic operation overflow")]
         fn test_provide_liquidity_exceed_max_value() {
