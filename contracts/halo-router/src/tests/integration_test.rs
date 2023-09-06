@@ -28,6 +28,7 @@ mod tests {
         use std::str::FromStr;
 
         use cosmwasm_std::Querier;
+        use cw20::Cw20ReceiveMsg;
         use cw_multi_test::Executor;
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
@@ -1265,6 +1266,8 @@ mod tests {
         // Mint 340_282_366_921 + 2 USDC tokens to USER_1
         // Create Pair: MSTR - USDC Token
         // USER_1 Successfully Add Liquidity: 2 MSTR - 2 USDC Token for initial liquidity
+        // USER_1 Successfully Add Liquidity: 340_282_366_918 MSTR - 340_282_366_918 USDC Token
+        // USER_1 Withdraw Liquidity: 340_282_366_918 MSTR - 340_282_366_918 USDC Token
         // USER_1 Fail to Add Liquidity: 340_282_366_921 MSTR - 340_282_366_921 USDC Token with panic:
         // "arithmetic operation overflow"
         #[test]
@@ -1432,6 +1435,78 @@ mod tests {
                 Addr::unchecked(USER_1.to_string()),
                 Addr::unchecked("contract5".to_string()),
                 &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(1u128),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // USER_1 Provide Liquidity
+            let provide_liquidity_msg = ExecuteMsg::ProvideLiquidity {
+                assets: [
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: mstr_token_contract.clone(),
+                        },
+                        amount: Uint128::from(340_282_366_918u128 * DECIMAL_FRACTIONAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(340_282_366_918u128 * DECIMAL_FRACTIONAL_18),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
+
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(1u128),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Balance of USER_1 in LP Token by calling cw20 balance_of
+            let user_1_lp_response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: USER_1.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert Balance of USER_1 in LP Token
+            assert_eq!(
+                user_1_lp_response.balance,
+                Uint128::from(340282366919999999999999999999u128),
+            );
+
+            // Withdraw Liquidity msg
+            let msg = Cw20HookMsg::WithdrawLiquidity {};
+
+            // Send 340282366919999999999999999999 LP Token to Pair Contract
+            let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
+                contract: "contract5".to_string(),
+                amount: Uint128::from(user_1_lp_response.balance),
+                msg: to_binary(&msg).unwrap(),
+            };
+
+            // Execute send
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked("contract6".to_string()),
+                &send_msg,
                 &[Coin {
                     amount: Uint128::from(1u128),
                     denom: NATIVE_DENOM_2.to_string(),
