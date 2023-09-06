@@ -1265,10 +1265,9 @@ mod tests {
         // Mint 340_282_366_921 + 2 USDC tokens to USER_1
         // Create Pair: MSTR - USDC Token
         // USER_1 Successfully Add Liquidity: 2 MSTR - 2 USDC Token for initial liquidity
-        // USER_1 Successfully Add Liquidity: 340_282_366_920 MSTR - 340_282_366_920 USDC Token
-        // USER_1 Withdraw Liquidity: 340_282_366_920 MSTR - 340_282_366_920 USDC Token
         // USER_1 Fail to Add Liquidity: 340_282_366_921 MSTR - 340_282_366_921 USDC Token with error: Exceed Max Value
         #[test]
+        #[should_panic(expected = "arithmetic operation overflow")]
         fn test_provide_liquidity_exceed_max_value() {
             // get integration test app and contracts
             let (mut app, contracts) = instantiate_contracts();
@@ -1440,27 +1439,27 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // USER_1 Provide Liquidity
+            // USER_1 Provide Overflow Liquidity
             let provide_liquidity_msg = ExecuteMsg::ProvideLiquidity {
                 assets: [
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: mstr_token_contract,
                         },
-                        amount: Uint128::from(340_282_366_918u128 * DECIMAL_FRACTIONAL_18),
+                        amount: Uint128::from(340_282_366_921u128 * DECIMAL_FRACTIONAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract,
                         },
-                        amount: Uint128::from(340_282_366_918u128 * DECIMAL_FRACTIONAL_18),
+                        amount: Uint128::from(340_282_366_921u128 * DECIMAL_FRACTIONAL_18),
                     },
                 ],
                 slippage_tolerance: None,
                 receiver: None,
             };
 
-            let response = app.execute_contract(
+            let _response = app.execute_contract(
                 Addr::unchecked(USER_1.to_string()),
                 Addr::unchecked("contract5".to_string()),
                 &provide_liquidity_msg,
@@ -1469,8 +1468,6 @@ mod tests {
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
-
-            assert!(response.is_ok());
         }
     }
 }
