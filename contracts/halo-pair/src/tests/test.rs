@@ -219,7 +219,7 @@ fn proper_initialization() {
 fn provide_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
-        amount: Uint128::from(200u128),
+        amount: Uint128::from(340_282_366_918_000_000_000_000_000_000u128),
     }]);
 
     deps.querier.with_token_balances(&[
@@ -310,6 +310,37 @@ fn provide_liquidity() {
         ContractError::InvalidZeroAmount {} => {}
         _ => panic!("DO NOT ENTER HERE"),
     }
+
+    // verify failed provide liquidity with over limit asset amount:
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(340_282_366_923_000_000_000_000_000_000u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(1u128),
+            },
+        ],
+        slippage_tolerance: None,
+        receiver: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(1u128),
+        }],
+    );
+    let res = execute(deps.as_mut(), env, info, msg);
+    assert!(res.is_ok());
 
     // successfully provide liquidity for the exist pool
     let msg = ExecuteMsg::ProvideLiquidity {

@@ -47,7 +47,10 @@ pub mod env {
     pub const MSTR_TOKEN_SYMBOL: &str = "MSTR";
     pub const MSTR_TOKEN_NAME: &str = "MSTR Token";
     pub const MSTR_TOKEN_DECIMALS: u8 = 18;
-    pub const MSTR_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000_000_000_000u128;
+
+    pub const USDC_TOKEN_SYMBOL: &str = "USDC";
+    pub const USDC_TOKEN_NAME: &str = "USDC Token";
+    pub const USDC_TOKEN_DECIMALS: u8 = 18;
 
     pub struct ContractInfo {
         pub contract_addr: String,
@@ -237,7 +240,7 @@ pub mod env {
             initial_balances: vec![],
             mint: Some(MinterResponse {
                 minter: ADMIN.to_string(), // the minter of the cw20 token must be the marketplace contract
-                cap: Some(Uint128::new(MSTR_TOKEN_INITIAL_SUPPLY)),
+                cap: None,
             }),
         };
 
@@ -256,6 +259,36 @@ pub mod env {
         // add contract info to the vector
         contract_info_vec.push(ContractInfo {
             contract_addr: mstr_token_contract_addr.to_string(),
+            contract_code_id: halo_token_contract_code_id,
+        });
+
+        // create instantiate message for contract
+        let usdc_token_contract_instantiate_msg = HaloTokenInstantiateMsg {
+            name: USDC_TOKEN_NAME.to_string(),
+            symbol: USDC_TOKEN_SYMBOL.to_string(),
+            decimals: USDC_TOKEN_DECIMALS,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                minter: ADMIN.to_string(), // the minter of the cw20 token must be the marketplace contract
+                cap: None,
+            }),
+        };
+
+        // instantiate contract
+        let usdc_token_contract_addr = app
+            .instantiate_contract(
+                halo_token_contract_code_id,
+                Addr::unchecked(ADMIN),
+                &usdc_token_contract_instantiate_msg,
+                &[],
+                "test instantiate contract",
+                None,
+            )
+            .unwrap();
+
+        // add contract info to the vector
+        contract_info_vec.push(ContractInfo {
+            contract_addr: usdc_token_contract_addr.to_string(),
             contract_code_id: halo_token_contract_code_id,
         });
 
