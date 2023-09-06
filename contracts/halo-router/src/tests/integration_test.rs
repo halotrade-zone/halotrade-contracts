@@ -1250,7 +1250,7 @@ mod tests {
             // Execute send
             let response = app.execute_contract(
                 Addr::unchecked(USER_1.to_string()),
-                Addr::unchecked(mstr_token_contract.clone()),
+                Addr::unchecked(mstr_token_contract),
                 &send_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
