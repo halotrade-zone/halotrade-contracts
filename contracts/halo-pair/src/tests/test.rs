@@ -311,7 +311,7 @@ fn provide_liquidity() {
         _ => panic!("DO NOT ENTER HERE"),
     }
 
-    // verify failed provide liquidity in max limit asset amount:
+    // successfully provide liquidity in max limit asset amount:
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [
             Asset {
