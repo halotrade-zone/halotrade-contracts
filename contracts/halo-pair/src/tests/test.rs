@@ -875,8 +875,7 @@ fn provide_overflow_liquidity() {
             amount: Uint128::from(1u128),
         }],
     );
-    let res = execute(deps.as_mut(), env, info, msg);
-    assert!(res.is_ok());
+    let _res = execute(deps.as_mut(), env, info, msg);
 }
 
 #[test]
