@@ -304,7 +304,7 @@ mod tests {
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
-            println!("{:?}", response);
+
             assert!(response.is_ok());
 
             // Query Pool
@@ -1105,7 +1105,7 @@ mod tests {
             let response: PairInfo = app
                 .wrap()
                 .query_wasm_smart(
-                    factory_contract.clone(),
+                    factory_contract,
                     &FactoryQueryMsg::Pair {
                         asset_infos: [
                             AssetInfo::Token {
@@ -1242,7 +1242,7 @@ mod tests {
 
             // Send 0.49 MSTR to Router Contract
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
-                contract: router_contract.clone(),
+                contract: router_contract,
                 amount: Uint128::from(480000000000000000u128),
                 msg: to_binary(&msg).unwrap(),
             };
@@ -1274,8 +1274,6 @@ mod tests {
             let (mut app, contracts) = instantiate_contracts();
             // Get factory contract
             let factory_contract = contracts[0].contract_addr.clone();
-            // Get router contract
-            let router_contract = contracts[1].contract_addr.clone();
             // Get MSTR token contract
             let mstr_token_contract = contracts[3].contract_addr.clone();
             // Get USDC token contract
@@ -1358,7 +1356,7 @@ mod tests {
 
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(factory_contract.clone()),
+                Addr::unchecked(factory_contract),
                 &create_pair_msg,
                 &[Coin {
                     amount: Uint128::from(1u128),
@@ -1447,13 +1445,13 @@ mod tests {
                 assets: [
                     Asset {
                         info: AssetInfo::Token {
-                            contract_addr: mstr_token_contract.clone(),
+                            contract_addr: mstr_token_contract,
                         },
                         amount: Uint128::from(340_282_366_918u128 * DECIMAL_FRACTIONAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
-                            contract_addr: usdc_token_contract.clone(),
+                            contract_addr: usdc_token_contract,
                         },
                         amount: Uint128::from(340_282_366_918u128 * DECIMAL_FRACTIONAL_18),
                     },
@@ -1472,7 +1470,6 @@ mod tests {
                 }],
             );
 
-            println!("{:?}", response);
             assert!(response.is_ok());
         }
     }
