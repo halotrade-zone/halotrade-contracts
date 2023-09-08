@@ -2,7 +2,7 @@ use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use haloswap::asset::{LPTokenInfo, AssetInfo};
 
-use crate::state::CreateStablePoolRequirements;
+use crate::state::{CreateStablePoolRequirements, StablePoolInfo};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -17,4 +17,11 @@ pub struct InstantiateMsg {
     pub commission_rate: Decimal256,
     /// lp token info
     pub lp_token_info: LPTokenInfo,
+}
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    #[returns(StablePoolInfo)]
+    StablePool {},
 }

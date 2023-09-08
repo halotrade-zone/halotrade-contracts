@@ -1,7 +1,8 @@
 use bignumber::Decimal256;
 use cosmwasm_std::{CanonicalAddr, Addr, Uint128};
 use cosmwasm_schema::cw_serde;
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
+use halo_stable_pool::state::StablePoolInfoRaw;
 use haloswap::asset::AssetInfoRaw;
 
 #[cw_serde]
@@ -14,13 +15,15 @@ pub struct Config {
 pub const CONFIG: Item<Config> = Item::new("config");
 
 #[cw_serde]
-pub struct TmpPairInfo {
+pub struct TmpStablePoolInfo {
     pub pair_key: Vec<u8>,
     pub asset_infos: Vec<AssetInfoRaw>,
     pub asset_decimals: Vec<u8>,
 }
 
-pub const TMP_PAIR_INFO: Item<TmpPairInfo> = Item::new("tmp_pair_info");
+pub const TMP_STABLE_POOL_INFO: Item<TmpStablePoolInfo> = Item::new("tmp_stable_pool_info");
+pub const STABLE_POOLS: Map<&[u8], StablePoolInfoRaw> = Map::new("stable_pool_info");
+
 
 pub fn pair_key(asset_infos: &Vec<AssetInfoRaw>) -> Vec<u8> {
     let mut asset_infos = asset_infos.to_vec();

@@ -6,7 +6,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
-use haloswap::token::InstantiateMsg as TokenInstantiateMsg;
+use haloswap::{token::InstantiateMsg as TokenInstantiateMsg, asset::AssetInfoRaw};
 
 use crate::{msg::InstantiateMsg, state::{StablePoolInfoRaw, CONFIG, Config, STABLE_POOL_INFO, COMMISSION_RATE_INFO}};
 
@@ -24,10 +24,17 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    // convert Vec<AssetInfo> to Vec<AssetInfoRaw>
+    let asset_infos: Vec<AssetInfoRaw> = msg
+        .asset_infos
+        .iter()
+        .map(|asset_info| asset_info.to_raw(deps.api))
+        .collect::<StdResult<Vec<AssetInfoRaw>>>()?;
+
     let pair_info: &StablePoolInfoRaw = &StablePoolInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
         liquidity_token: CanonicalAddr::from(vec![]),
-        asset_infos: msg.asset_infos,
+        asset_infos,
         asset_decimals: msg.asset_decimals,
         requirements: msg.requirements,
         commission_rate: msg.commission_rate,

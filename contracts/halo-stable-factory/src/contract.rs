@@ -3,13 +3,16 @@ use std::str::FromStr;
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, StdError, SubMsg, CosmosMsg, WasmMsg, attr, to_binary, ReplyOn};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, StdError, SubMsg, CosmosMsg, WasmMsg, attr, to_binary, ReplyOn, Reply, Addr};
 use cw2::set_contract_version;
-use halo_stable_pool::state::{CreateStablePoolRequirements, DEFAULT_COMMISSION_RATE};
+use cw_utils::parse_reply_instantiate_data;
+use halo_stable_pool::state::{CreateStablePoolRequirements, DEFAULT_COMMISSION_RATE, StablePoolInfoRaw};
 use halo_stable_pool::msg::InstantiateMsg as StablePoolInstantiateMsg;
 use haloswap::asset::{AssetInfo, LPTokenInfo, AssetInfoRaw};
 
-use crate::{msg::{InstantiateMsg, ExecuteMsg}, state::{Config, CONFIG, pair_key, TMP_PAIR_INFO, TmpPairInfo}};
+use crate::query::query_stable_pool_info_from_stable_pool;
+use crate::state::STABLE_POOLS;
+use crate::{msg::{InstantiateMsg, ExecuteMsg}, state::{Config, CONFIG, pair_key, TMP_STABLE_POOL_INFO, TmpStablePoolInfo}};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:halo-stable-factory";
@@ -108,9 +111,9 @@ pub fn execute_create_stable_pool(
     // Get pair key
     let pair_key = pair_key(&raw_infos);
 
-    TMP_PAIR_INFO.save(
+    TMP_STABLE_POOL_INFO.save(
         deps.storage,
-        &TmpPairInfo {
+        &TmpStablePoolInfo {
             pair_key,
             asset_infos: raw_infos,
             asset_decimals: asset_decimals.clone(),
@@ -147,4 +150,38 @@ pub fn execute_create_stable_pool(
             }),
             reply_on: ReplyOn::Success,
         }))
+}
+
+/// This just stores the result for future query
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    let tmp_stable_pool_info = TMP_STABLE_POOL_INFO.load(deps.storage)?;
+
+    let reply = parse_reply_instantiate_data(msg).unwrap();
+
+    // let res: MsgInstantiateContractResponse =
+    //     Message::parse_from_bytes(msg.result.unwrap().data.unwrap().as_slice()).map_err(|_| {
+    //         StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
+    //     })?;
+
+    let stable_pool_contract = &reply.contract_address;
+    let pair_info = query_stable_pool_info_from_stable_pool(&deps.querier, Addr::unchecked(stable_pool_contract))?;
+
+    STABLE_POOLS.save(
+        deps.storage,
+        &tmp_stable_pool_info.pair_key,
+        &StablePoolInfoRaw {
+            liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
+            contract_addr: deps.api.addr_canonicalize(stable_pool_contract)?,
+            asset_infos: tmp_stable_pool_info.asset_infos,
+            asset_decimals: tmp_stable_pool_info.asset_decimals,
+            requirements: pair_info.requirements,
+            commission_rate: Decimal256::from_str(&pair_info.commission_rate.to_string()).unwrap(),
+        },
+    )?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("stable_pool_contract_addr", stable_pool_contract),
+        ("liquidity_token_addr", &pair_info.liquidity_token),
+    ]))
 }
