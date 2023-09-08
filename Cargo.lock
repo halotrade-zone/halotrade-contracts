@@ -586,6 +586,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "halo-stable-factory"
+version = "1.0.0"
+dependencies = [
+ "bignumber",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.0",
+ "cw-utils 1.0.0",
+ "cw2 1.0.0",
+ "getrandom",
+ "halo-stable-pool",
+ "haloswap",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "halo-stable-pool"
+version = "1.0.0"
+dependencies = [
+ "bignumber",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.0",
+ "cw-utils 1.0.0",
+ "cw2 1.0.0",
+ "cw20",
+ "getrandom",
+ "halo-factory",
+ "haloswap",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "haloswap"
 version = "1.0.0"
 dependencies = [

@@ -26,6 +26,7 @@ haloswap          = { path = "./packages/haloswap", default-features = false, ve
 halo-factory      = { path = "./contracts/halo-factory" }
 halo-pair         = { path = "./contracts/halo-pair" }
 halo-router       = { path = "./contracts/halo-router" }
+halo-stable-pool  = { path = "./contracts/halo-stable-pool" }
 bigint            = "4.4.3"
 cosmwasm-schema   = "1.1.8"
 cosmwasm-std      = "1.1.8"
