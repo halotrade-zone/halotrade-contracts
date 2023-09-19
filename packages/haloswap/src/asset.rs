@@ -2,10 +2,10 @@ use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
 use std::fmt;
 
-use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
+use crate::{querier::{query_balance, query_native_decimals, query_token_balance, query_token_info}, error::ContractError};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, MessageInfo, QuerierWrapper,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    StdError, StdResult, SubMsg, Uint128, WasmMsg, Deps,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -94,6 +94,22 @@ impl Asset {
             },
             amount: self.amount,
         })
+    }
+
+    pub fn assert_asset_info(deps: Deps ,asset_infos: &[AssetInfoRaw], pools: &[Asset]) -> Result<(), ContractError> {
+        for pool in pools.iter() {
+            let mut is_valid = false;
+            for asset_info in asset_infos.iter() {
+                if pool.info == asset_info.to_normal(deps.api)? {
+                    is_valid = true;
+                    break;
+                }
+            }
+            if !is_valid {
+                return Err(ContractError::AssetMismatch { });
+            }
+        }
+        Ok(())
     }
 }
 

@@ -597,6 +597,8 @@ dependencies = [
  "cw-storage-plus 1.0.0",
  "cw-utils 1.0.0",
  "cw2 1.0.0",
+ "cw20",
+ "cw20-base",
  "getrandom",
  "halo-stable-pool",
  "haloswap",

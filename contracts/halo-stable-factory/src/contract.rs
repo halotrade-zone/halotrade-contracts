@@ -3,14 +3,16 @@ use std::str::FromStr;
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, StdError, SubMsg, CosmosMsg, WasmMsg, attr, to_binary, ReplyOn, Reply, Addr};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, StdError, SubMsg, CosmosMsg, WasmMsg, attr, to_binary, ReplyOn, Reply, Addr, Deps, Binary};
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
+use halo_stable_pool::math::AmpFactor;
 use halo_stable_pool::state::{CreateStablePoolRequirements, DEFAULT_COMMISSION_RATE, StablePoolInfoRaw};
 use halo_stable_pool::msg::InstantiateMsg as StablePoolInstantiateMsg;
 use haloswap::asset::{AssetInfo, LPTokenInfo, AssetInfoRaw};
 
-use crate::query::query_stable_pool_info_from_stable_pool;
+use crate::msg::{QueryMsg, ConfigResponse};
+use crate::query::query_stable_pool_info_from_stable_pools;
 use crate::state::STABLE_POOLS;
 use crate::{msg::{InstantiateMsg, ExecuteMsg}, state::{Config, CONFIG, pair_key, TMP_STABLE_POOL_INFO, TmpStablePoolInfo}};
 
@@ -28,7 +30,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
-        owner: deps.api.addr_canonicalize(info.sender.as_str())?,
+        owner: deps.api.addr_validate(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
         stable_pool_code_id: msg.stable_pool_code_id,
     };
@@ -46,6 +48,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             requirements,
             commission_rate,
             lp_token_info,
+            amp_factor_info,
         } => execute_create_stable_pool(
             deps,
             env,
@@ -54,6 +57,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             requirements,
             commission_rate,
             lp_token_info,
+            amp_factor_info,
         ),
     }
 }
@@ -66,11 +70,12 @@ pub fn execute_create_stable_pool(
     requirements: CreateStablePoolRequirements,
     commission_rate: Option<Decimal256>,
     lp_token_info: LPTokenInfo,
+    amp_factor_info: AmpFactor,
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     // Permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+    if deps.api.addr_validate(info.sender.as_str())? != config.owner {
         return Err(StdError::generic_err("unauthorized"));
     }
 
@@ -122,9 +127,9 @@ pub fn execute_create_stable_pool(
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_stable_pool"),
-            ("stable_assets",
+            ("stable_assets", &format!("{}",
             // Loop and add all asset_info to get stable assets
-            &asset_infos.iter().map(|asset_info| asset_info.to_string()).collect::<Vec<String>>().join(",")),
+            &asset_infos.iter().map(|asset_info| asset_info.to_string()).collect::<Vec<String>>().join(","))),
         ])
         .add_submessage(SubMsg {
             id: 1,
@@ -146,6 +151,7 @@ pub fn execute_create_stable_pool(
                         lp_token_symbol: lp_token_info.lp_token_symbol,
                         lp_token_decimals: lp_token_info.lp_token_decimals,
                     },
+                    amp_factor_info
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -159,29 +165,42 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
     let reply = parse_reply_instantiate_data(msg).unwrap();
 
-    // let res: MsgInstantiateContractResponse =
-    //     Message::parse_from_bytes(msg.result.unwrap().data.unwrap().as_slice()).map_err(|_| {
-    //         StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
-    //     })?;
-
     let stable_pool_contract = &reply.contract_address;
-    let pair_info = query_stable_pool_info_from_stable_pool(&deps.querier, Addr::unchecked(stable_pool_contract))?;
+    let stable_pool_info = query_stable_pool_info_from_stable_pools(&deps.querier, Addr::unchecked(stable_pool_contract))?;
 
     STABLE_POOLS.save(
         deps.storage,
         &tmp_stable_pool_info.pair_key,
         &StablePoolInfoRaw {
-            liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
+            liquidity_token: deps.api.addr_canonicalize(&stable_pool_info.liquidity_token)?,
             contract_addr: deps.api.addr_canonicalize(stable_pool_contract)?,
             asset_infos: tmp_stable_pool_info.asset_infos,
             asset_decimals: tmp_stable_pool_info.asset_decimals,
-            requirements: pair_info.requirements,
-            commission_rate: Decimal256::from_str(&pair_info.commission_rate.to_string()).unwrap(),
+            requirements: stable_pool_info.requirements,
+            commission_rate: Decimal256::from_str(&stable_pool_info.commission_rate.to_string()).unwrap(),
         },
     )?;
 
     Ok(Response::new().add_attributes(vec![
         ("stable_pool_contract_addr", stable_pool_contract),
-        ("liquidity_token_addr", &pair_info.liquidity_token),
+        ("liquidity_token_addr", &stable_pool_info.liquidity_token),
     ]))
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => to_binary(&query_config(deps)?),
+    }
+}
+
+pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+    let state: Config = CONFIG.load(deps.storage)?;
+    let resp = ConfigResponse {
+        owner: deps.api.addr_validate(&state.owner.to_string())?.to_string(),
+        token_code_id: state.token_code_id,
+        stable_pool_code_id: state.stable_pool_code_id,
+    };
+
+    Ok(resp)
 }

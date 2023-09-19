@@ -1,8 +1,9 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use haloswap::asset::{LPTokenInfo, AssetInfo};
+use cosmwasm_std::Decimal;
+use haloswap::asset::{LPTokenInfo, AssetInfo, Asset};
 
-use crate::state::{CreateStablePoolRequirements, StablePoolInfo};
+use crate::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -17,6 +18,17 @@ pub struct InstantiateMsg {
     pub commission_rate: Decimal256,
     /// lp token info
     pub lp_token_info: LPTokenInfo,
+    /// Amplification coefficient for the pool
+    pub amp_factor_info: AmpFactor,
+}
+
+#[cw_serde]
+pub enum ExecuteMsg {
+    ProvideLiquidity {
+        assets: Vec<Asset>,
+        slippage_tolerance: Option<Decimal>,
+        receiver: Option<String>,
+    },
 }
 
 #[cw_serde]

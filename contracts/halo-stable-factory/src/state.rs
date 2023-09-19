@@ -7,7 +7,7 @@ use haloswap::asset::AssetInfoRaw;
 
 #[cw_serde]
 pub struct Config {
-    pub owner: CanonicalAddr,
+    pub owner: Addr,
     pub stable_pool_code_id: u64,
     pub token_code_id: u64,
 }

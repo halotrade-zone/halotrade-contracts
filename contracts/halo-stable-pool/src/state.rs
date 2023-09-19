@@ -1,8 +1,10 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, CanonicalAddr};
+use cosmwasm_std::{Addr, Uint128, CanonicalAddr, StdResult, Api, QuerierWrapper};
 use cw_storage_plus::Item;
-use haloswap::asset::{AssetInfoRaw, AssetInfo};
+use haloswap::asset::{AssetInfoRaw, AssetInfo, Asset};
+
+use crate::math::AmpFactor;
 
 #[cw_serde]
 pub struct Config {
@@ -16,6 +18,8 @@ pub const STABLE_POOL_INFO: Item<StablePoolInfoRaw> = Item::new("pair_info");
 pub const DEFAULT_COMMISSION_RATE: &str = "0.003";
 // Store commission rate for the pair
 pub const COMMISSION_RATE_INFO: Item<Decimal256> = Item::new("commission_rate_info");
+// Amplification factor info
+pub const AMP_FACTOR_INFO: Item<AmpFactor> = Item::new("amp_factor_info");
 
 // We define a custom struct for each query response
 #[cw_serde]
@@ -36,6 +40,37 @@ pub struct StablePoolInfoRaw {
     pub asset_decimals: Vec<u8>,
     pub requirements: CreateStablePoolRequirements,
     pub commission_rate: Decimal256,
+}
+
+impl StablePoolInfoRaw{
+    pub fn to_normal(&self, api: &dyn Api) -> StdResult<StablePoolInfo> {
+        Ok(StablePoolInfo {
+            asset_infos: self.asset_infos.iter().map(|x| x.to_normal(api)).collect::<StdResult<Vec<AssetInfo>>>()?,
+            contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
+            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            asset_decimals: self.asset_decimals.clone(),
+            requirements: self.requirements.clone(),
+            commission_rate: self.commission_rate,
+        })
+    }
+
+    pub fn query_pools(
+        &self,
+        querier: &QuerierWrapper,
+        api: &dyn Api,
+        contract_addr: Addr,
+    ) -> StdResult<Vec<Asset>> {
+        let info: Vec<AssetInfo> = self.asset_infos.iter().map(|x| x.to_normal(api)).collect::<StdResult<Vec<AssetInfo>>>()?;
+        let mut assets: Vec<Asset> = Vec::new();
+        for asset_info in info.iter() {
+            let asset = Asset {
+                info: asset_info.clone(),
+                amount: asset_info.query_pool(querier, api, contract_addr.clone())?,
+            };
+            assets.push(asset);
+        }
+        Ok(assets)
+    }
 }
 
 #[cw_serde]
