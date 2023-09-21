@@ -35,8 +35,8 @@ pub struct StablePoolInfo {
 #[cw_serde]
 pub struct StablePoolInfoRaw {
     pub asset_infos: Vec<AssetInfoRaw>,
-    pub contract_addr: CanonicalAddr,
-    pub liquidity_token: CanonicalAddr,
+    pub contract_addr: Addr,
+    pub liquidity_token: Addr,
     pub asset_decimals: Vec<u8>,
     pub requirements: CreateStablePoolRequirements,
     pub commission_rate: Decimal256,
@@ -46,8 +46,8 @@ impl StablePoolInfoRaw{
     pub fn to_normal(&self, api: &dyn Api) -> StdResult<StablePoolInfo> {
         Ok(StablePoolInfo {
             asset_infos: self.asset_infos.iter().map(|x| x.to_normal(api)).collect::<StdResult<Vec<AssetInfo>>>()?,
-            contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
-            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            contract_addr: api.addr_validate(&self.contract_addr.to_string())?.to_string(),
+            liquidity_token: api.addr_validate(&self.liquidity_token.to_string())?.to_string(),
             asset_decimals: self.asset_decimals.clone(),
             requirements: self.requirements.clone(),
             commission_rate: self.commission_rate,

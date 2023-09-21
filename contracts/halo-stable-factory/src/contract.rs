@@ -7,7 +7,7 @@ use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, StdError, Sub
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use halo_stable_pool::math::AmpFactor;
-use halo_stable_pool::state::{CreateStablePoolRequirements, DEFAULT_COMMISSION_RATE, StablePoolInfoRaw};
+use halo_stable_pool::state::{CreateStablePoolRequirements, DEFAULT_COMMISSION_RATE, StablePoolInfoRaw, StablePoolInfo};
 use halo_stable_pool::msg::InstantiateMsg as StablePoolInstantiateMsg;
 use haloswap::asset::{AssetInfo, LPTokenInfo, AssetInfoRaw};
 
@@ -172,8 +172,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         deps.storage,
         &tmp_stable_pool_info.pair_key,
         &StablePoolInfoRaw {
-            liquidity_token: deps.api.addr_canonicalize(&stable_pool_info.liquidity_token)?,
-            contract_addr: deps.api.addr_canonicalize(stable_pool_contract)?,
+            liquidity_token: deps.api.addr_validate(&stable_pool_info.liquidity_token)?,
+            contract_addr: deps.api.addr_validate(stable_pool_contract)?,
             asset_infos: tmp_stable_pool_info.asset_infos,
             asset_decimals: tmp_stable_pool_info.asset_decimals,
             requirements: stable_pool_info.requirements,
@@ -191,6 +191,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::StablePool { asset_infos } => to_binary(&query_stable_pool(deps, asset_infos)?),
     }
 }
 
@@ -203,4 +204,15 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     };
 
     Ok(resp)
+}
+
+pub fn query_stable_pool(deps: Deps, asset_infos: Vec<AssetInfo>) -> StdResult<StablePoolInfo> {
+    let stable_pool_key = pair_key(
+        &asset_infos
+            .iter()
+            .map(|asset_info| asset_info.to_raw(deps.api).unwrap())
+            .collect::<Vec<AssetInfoRaw>>(),
+    );
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOLS.load(deps.storage, &stable_pool_key)?;
+    stable_pool_info.to_normal(deps.api)
 }

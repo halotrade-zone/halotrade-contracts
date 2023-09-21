@@ -1,6 +1,6 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use halo_stable_pool::{state::CreateStablePoolRequirements, math::AmpFactor};
+use halo_stable_pool::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
 use haloswap::asset::{AssetInfo, LPTokenInfo};
 
 #[cw_serde]
@@ -32,6 +32,8 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(ConfigResponse)]
     Config {},
+    #[returns(StablePoolInfo)]
+    StablePool { asset_infos: Vec<AssetInfo> },
 }
 
 // We define a custom struct for each query response

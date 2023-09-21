@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Reply, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg,
+    MessageInfo, Reply, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, StdError,
 };
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
@@ -33,8 +33,8 @@ pub fn instantiate(
         .collect::<StdResult<Vec<AssetInfoRaw>>>()?;
 
     let stable_pool_info: &StablePoolInfoRaw = &StablePoolInfoRaw {
-        contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
-        liquidity_token: CanonicalAddr::from(vec![]),
+        contract_addr: deps.api.addr_validate(env.contract.address.as_str())?,
+        liquidity_token: Addr::unchecked(""),
         asset_infos,
         asset_decimals: msg.asset_decimals,
         requirements: msg.requirements,
@@ -90,7 +90,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
     let api = deps.api;
     STABLE_POOL_INFO.update(deps.storage, |mut meta| -> StdResult<_> {
-        meta.liquidity_token = api.addr_canonicalize(&liquidity_token)?;
+        meta.liquidity_token = api.addr_validate(&liquidity_token)?;
         Ok(meta)
     })?;
 
@@ -110,6 +110,9 @@ pub fn execute(
             slippage_tolerance,
             receiver,
         } => provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
+        ExecuteMsg::RemoveLiquidityByShare { share, assets_min_amount } => {
+            remove_liquidity_by_share(deps, env, info, share, assets_min_amount)
+        }
     }
 }
 
@@ -181,17 +184,18 @@ pub fn provide_liquidity(
         .collect::<Vec<Uint128>>();
 
     // get the address of the LP token
-    let liquidity_token = deps.api.addr_humanize(&stable_pool_info.liquidity_token)?;
+    let liquidity_token = deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?;
 
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
 
     // calculate the amount of LP token is minted to the user
     let mut share = amp_factor_info.compute_lp_amount_for_deposit(&deposits, &old_c_amounts, total_share, Uint128::zero()).unwrap().0;
-
     // prevent providing free token (one of the deposits is zero)
     if share.is_zero() {
-        return Err(ContractError::InvalidZeroAmount {});
+        return Err(ContractError::Std(StdError::generic_err(
+            "Share amount is zero",
+        )));
     }
 
     // mint LP token to sender
@@ -203,12 +207,12 @@ pub fn provide_liquidity(
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: deps
                 .api
-                .addr_humanize(&stable_pool_info.liquidity_token)?
+                .addr_validate(&stable_pool_info.liquidity_token.to_string())?
                 .to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: deps
                     .api
-                    .addr_humanize(&stable_pool_info.liquidity_token)?
+                    .addr_validate(&stable_pool_info.liquidity_token.to_string())?
                     .to_string(),
                 amount: Uint128::from(LP_TOKEN_RESERVED_AMOUNT),
             })?,
@@ -221,7 +225,7 @@ pub fn provide_liquidity(
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: deps
             .api
-            .addr_humanize(&stable_pool_info.liquidity_token)?
+            .addr_validate(&stable_pool_info.liquidity_token.to_string())?
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
             recipient: receiver.to_string(),
@@ -237,6 +241,16 @@ pub fn provide_liquidity(
         ("assets", &format!("{}, {}", assets[0], assets[1])),
         ("share", &share.to_string()),
     ]))
+}
+
+pub fn remove_liquidity_by_share(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    share: Uint128,
+    assets_min_amount: Vec<Uint128>,
+) -> Result<Response, ContractError> {
+
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

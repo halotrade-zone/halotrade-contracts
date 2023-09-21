@@ -66,7 +66,7 @@ impl AmpFactor{
             return Some(Decimal256::zero());
         } else {
             let amp_factor = self.compute_amp_factor()?;
-            let mut d_prev = Decimal256::zero();
+            let mut d_prev;
             let mut d = Decimal256::from_uint256(sum_x);
 
             for _ in 0..256 {
@@ -78,8 +78,9 @@ impl AmpFactor{
                 d_prev = d;
 
                 let ann = Uint256::from(amp_factor.checked_mul(n_coins.checked_pow(n_coins)?.into()).unwrap());
-                let leverage = (Decimal256::from_uint256(sum_x)) / Decimal256::from_uint256(ann);
+                let leverage = (Decimal256::from_uint256(sum_x)) * Decimal256::from_uint256(ann);
                 // d = (ann * sum_x + d_prod * n_coins) * d_prev / ((ann - 1) * d_prev + (n_coins + 1) * d_prod)
+                println!("ann: {}, sum_x: {}, d_prod: {}, n_coins: {}, d_prev: {}, leverage: {}", ann, sum_x, d_prod, n_coins, d_prev, leverage);
                 let numerator = d_prev * (d_prod * Decimal256::from_uint256(Uint256::from(Uint128::from(n_coins))) + leverage);
                 let denominator = d_prev * (Decimal256::from_uint256(ann) - Decimal256::one()) + (d_prod * (Decimal256::from_uint256(Uint256::from(Uint128::from(n_coins))) + Decimal256::one())).into();
                 d = numerator / denominator;
@@ -106,37 +107,43 @@ impl AmpFactor{
         pool_token_supply: Uint128, // current share supply
         _fees: Uint128, // fees in decimal
     ) -> Option<(Uint128, Uint128)> {
-        let n_coins = old_c_amounts.len();
 
-        // Initial invariant
-        let d_0 = self.compute_d(old_c_amounts)?;
-
-        let mut new_balances = vec![Uint128::zero(); n_coins];
-        for (index, value) in deposit_c_amounts.iter().enumerate() {
-            new_balances[index] = old_c_amounts[index].checked_add(*value).unwrap();
-        }
-        // Invariant after change
-        let d_1 = self.compute_d(&new_balances)?;
-        if d_1 <= d_0 {
-            return None;
+        if pool_token_supply.is_zero() {
+            let invariant = self.compute_d(deposit_c_amounts)? * Uint256::one();
+            println!("invariant: {}", invariant);
+            return Some((invariant.into(), Uint128::zero()));
         } else {
-            // Recalculate the invariant accounting for fees
-            for i in 0..new_balances.len() {
-                let ideal_balance = d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
-                let difference = if ideal_balance > Decimal256::from_uint256(Uint256::from(new_balances[i])) {
-                    ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
-                } else {
-                    Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
-                };
-                // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
-                // new_balances[i] = new_balances[i] - fee;
+            let n_coins = old_c_amounts.len();
+            // Initial invariant
+            let d_0 = self.compute_d(old_c_amounts)?;
+            let mut new_balances = vec![Uint128::zero(); n_coins];
+
+            for (index, value) in deposit_c_amounts.iter().enumerate() {
+                new_balances[index] = old_c_amounts[index].checked_add(*value).unwrap();
             }
 
-            let d_2 = self.compute_d(&new_balances)?;
+            // Invariant after change
+            let d_1 = self.compute_d(&new_balances)?;
+            if d_1 <= d_0 {
+                return None;
+            } else {
+                // Recalculate the invariant accounting for fees
+                for i in 0..new_balances.len() {
+                    let ideal_balance = d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
+                    let difference = if ideal_balance > Decimal256::from_uint256(Uint256::from(new_balances[i])) {
+                        ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
+                    } else {
+                        Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
+                    };
+                    // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
+                    // new_balances[i] = new_balances[i] - fee;
+                }
 
-            let mints_shares: Uint256 = (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_2 - d_0) / d_0) * Uint256::one();
+                let d_2 = self.compute_d(&new_balances)?;
+                let mints_shares: Uint256 = (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_2 - d_0) / d_0) * Uint256::one();
 
-            Some((mints_shares.into(), Uint128::zero()))
+                Some((mints_shares.into(), Uint128::zero()))
+            }
         }
     }
 
