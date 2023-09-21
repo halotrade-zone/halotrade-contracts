@@ -250,6 +250,84 @@ pub fn remove_liquidity_by_share(
     share: Uint128,
     assets_min_amount: Vec<Uint128>,
 ) -> Result<Response, ContractError> {
+    // Get stable pool info
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get sender's LP token balance
+
+    let shares_total_supply = query_token_info(&deps.querier, deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?)?.total_supply;
+
+    // Get the amount of assets in the stable pool
+    let mut pools: Vec<Asset> = stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+
+    // Get the amount of assets that user will receive after removing liquidity
+    let assets_amount: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| {
+            // Return the amount of assets that user will receive
+            Ok(pool.amount.checked_mul(share)?.checked_div(shares_total_supply)?)
+        })
+        .collect::<StdResult<Vec<Uint128>>>()?;
+
+    // Check the amount of assets that user will receive is greater than the minimum amount of assets that user wants to receive
+    for (i, asset_amount) in assets_amount.iter().enumerate() {
+        if *asset_amount <= assets_min_amount[i] {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Invalid minimum amount of assets",
+            )));
+        }
+    }
+
+    // Send the amount of assets that user will receive to the sender
+    let mut messages: Vec<CosmosMsg> = vec![];
+    for (i, pool) in pools.iter_mut().enumerate() {
+        // If the asset 'pool' is a token, then we need to execute Transfer msg to send funds
+        // If the asset 'pool' is native token, the amount of native token is already sent with the message to the pool.
+        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: contract_addr.to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    recipient: info.sender.to_string(),
+                    amount: assets_amount[i],
+                })?,
+                funds: vec![],
+            }));
+        }
+    }
+
+    // Get the address of the LP token
+    let liquidity_token = deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?;
+
+    // Transfer LP token from sender to contract
+    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: liquidity_token.to_string(),
+        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+            owner: info.sender.to_string(),
+            recipient: env.contract.address.to_string(),
+            amount: share,
+        })?,
+        funds: vec![],
+    }));
+
+    // Burn LP token from sender
+    let burn_msg = Cw20ExecuteMsg::Burn {
+        amount: share,
+    };
+
+    // If the amount of LP token is zero, then we don't need to burn LP token
+    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: liquidity_token.to_string(),
+        msg: to_binary(&burn_msg)?,
+        funds: vec![],
+    }));
+
+
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
+        ("action", "remove_liquidity_by_share"),
+        ("sender", info.sender.as_str()),
+        ("share", &share.to_string()),
+        ("assets", &format!("{}, {}", assets_amount[0], assets_amount[1])),
+    ]))
+
 
 }
 

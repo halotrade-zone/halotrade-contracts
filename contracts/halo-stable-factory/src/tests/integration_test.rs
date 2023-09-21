@@ -30,7 +30,10 @@ mod tests {
 
         use super::*;
         // Create a stable swap pool with 3 tokens USDC, USDT, BUSD
-        // Add liquidity to the pool
+        // Add liquidity to the pool (1 USDC, 1 USDT, 1 BUSD)
+        // Add liquidity to the pool one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+        // Withdraw liquidity from the pool by 50% of Share
+        // -> ADMIN should get (50_000.5 USDC, 100_000.5 USDT, 100_000.5 BUSD)
         #[test]
         fn test_add_liquidity_pool_3_tokens() {
             // get integration test app and contracts
@@ -236,63 +239,63 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // // provide liquidity to the pool
-            // let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
-            //     assets: vec![
-            //         Asset {
-            //             info: AssetInfo::Token {
-            //                 contract_addr: usdc_token_contract.clone(),
-            //             },
-            //             amount: Uint128::from(1u128 * DECIMAL_18),
-            //         },
-            //         Asset {
-            //             info: AssetInfo::Token {
-            //                 contract_addr: usdt_token_contract.clone(),
-            //             },
-            //             amount: Uint128::from(1u128 * DECIMAL_18),
-            //         },
-            //         Asset {
-            //             info: AssetInfo::Token {
-            //                 contract_addr: busd_token_contract.clone(),
-            //             },
-            //             amount: Uint128::from(1u128 * DECIMAL_18),
-            //         },
-            //     ],
-            //     slippage_tolerance: None,
-            //     receiver: None,
-            // };
+            // provide liquidity to the pool
+            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(1u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(1u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(1u128 * DECIMAL_6),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
 
-            // // Execute provide liquidity
-            // let response = app.execute_contract(
-            //     Addr::unchecked(ADMIN.to_string()),
-            //     Addr::unchecked("contract5".to_string()),
-            //     &provide_liquidity_msg,
-            //     &[Coin {
-            //         amount: Uint128::from(MOCK_TRANSACTION_FEE),
-            //         denom: NATIVE_DENOM_2.to_string(),
-            //     }],
-            // );
+            // Execute provide liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
 
-            // assert!(response.is_ok());
+            assert!(response.is_ok());
 
-            // // Query LP Balance of ADMIN
-            // let response: BalanceResponse = app
-            //     .wrap()
-            //     .query_wasm_smart(
-            //         "contract6".to_string(),
-            //         &Cw20QueryMsg::Balance {
-            //             address: ADMIN.to_string(),
-            //         },
-            //     )
-            //     .unwrap();
+            // Query LP Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
 
-            // // Assert LP Balance of ADMIN
-            // assert_eq!(
-            //     response,
-            //     BalanceResponse {
-            //         balance: Uint128::from(1_028_825_635u128),
-            //     }
-            // );
+            // Assert LP Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(2_999_999u128),
+                }
+            );
 
             // provide liquidity to the pool one more time
             let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
@@ -331,7 +334,8 @@ mod tests {
                 }],
             );
 
-            println!("response: {:?}", response);
+            assert!(response.is_ok());
+
             assert!(response.is_ok());
 
             // Query LP Balance of ADMIN
@@ -349,10 +353,73 @@ mod tests {
             assert_eq!(
                 response,
                 BalanceResponse {
-                    balance: Uint128::from(2057651271u128),
+                    balance: Uint128::from(500_001_542_633u128),
                 }
             );
 
+            // Increase allowance of LP Token for stable pool contract
+            let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+                spender: "contract5".to_string(),
+                amount: Uint128::from(500_001_542_633u128),
+                expires: None,
+            };
+
+            // Execute increase allowance for LP Token
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract6".to_string()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Withdraw liquidity from the pool
+            let withdraw_liquidity_msg = StablePoolExecuteMsg::RemoveLiquidityByShare {
+                share: Uint128::from(250_000_771_316u128),
+                assets_min_amount: vec![
+                    Uint128::from(0u128),
+                    Uint128::from(0u128),
+                    Uint128::from(0u128),
+                ],
+            };
+
+            // Execute withdraw liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &withdraw_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            println!("responseeeeee: {:?}", response);
+            assert!(response.is_ok());
+
+            // Query USDC Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert USDC Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(
+                        MOCK_1_000_000_000_USDC
+                        - 1 * DECIMAL_6
+                        - 100_000u128 * DECIMAL_6
+                        + 50_000_499_999u128),
+                }
+            );
 
 
         }
