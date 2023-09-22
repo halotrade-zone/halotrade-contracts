@@ -241,7 +241,7 @@ pub fn provide_liquidity(
         ("action", "provide_liquidity"),
         ("sender", info.sender.as_str()),
         ("receiver", receiver.as_str()),
-        ("assets", &format!("{}, {}", assets[0], assets[1])),
+        ("assets", &format!("{}", assets.iter().map(|asset| asset.to_string()).collect::<Vec<String>>().join(","))),
         ("share", &share.to_string()),
     ]))
 }
@@ -253,6 +253,12 @@ pub fn remove_liquidity_by_share(
     share: Uint128,
     assets_min_amount: Option<Vec<Uint128>>,
 ) -> Result<Response, ContractError> {
+    // Check the amount of LP token that user will burn is greater than zero
+    if share.is_zero() {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Share amount is zero",
+        )));
+    }
     // Get stable pool info
     let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
     // Get sender's LP token balance
@@ -314,14 +320,11 @@ pub fn remove_liquidity_by_share(
     }));
 
     // Burn LP token from sender
-    let burn_msg = Cw20ExecuteMsg::Burn {
-        amount: share,
-    };
-
-    // If the amount of LP token is zero, then we don't need to burn LP token
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token.to_string(),
-        msg: to_binary(&burn_msg)?,
+        msg: to_binary(&Cw20ExecuteMsg::Burn {
+            amount: share,
+        })?,
         funds: vec![],
     }));
 
@@ -330,7 +333,7 @@ pub fn remove_liquidity_by_share(
         ("action", "remove_liquidity_by_share"),
         ("sender", info.sender.as_str()),
         ("share", &share.to_string()),
-        ("assets", &format!("{}, {}", assets_amount[0], assets_amount[1])),
+        ("assets", &format!("{}", pools.iter().map(|asset| asset.to_string()).collect::<Vec<String>>().join(","))),
     ]))
 
 
@@ -416,14 +419,11 @@ pub fn remove_liquidity_by_token(
     }));
 
     // Burn LP token from sender
-    let burn_msg = Cw20ExecuteMsg::Burn {
-        amount: share,
-    };
-
-    // If the amount of LP token is zero, then we don't need to burn LP token
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token.to_string(),
-        msg: to_binary(&burn_msg)?,
+        msg: to_binary(&Cw20ExecuteMsg::Burn {
+            amount: share,
+        })?,
         funds: vec![],
     }));
 
@@ -431,7 +431,7 @@ pub fn remove_liquidity_by_token(
         ("action", "remove_liquidity_by_token"),
         ("sender", info.sender.as_str()),
         ("share", &share.to_string()),
-        ("assets", &format!("{}, {}", assets[0].amount, assets[1].amount)),
+        ("assets", &format!("{}", assets.iter().map(|asset| asset.to_string()).collect::<Vec<String>>().join(","))),
     ]))
 
 }
