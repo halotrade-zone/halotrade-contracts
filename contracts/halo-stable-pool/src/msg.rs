@@ -34,7 +34,7 @@ pub enum ExecuteMsg {
         assets_min_amount: Vec<Uint128>,
     },
     RemoveLiquidityByToken {
-        token_amounts: Vec<Uint128>,
+        assets: Vec<Asset>,
         max_burn_share: Option<Uint128>,
     },
 }

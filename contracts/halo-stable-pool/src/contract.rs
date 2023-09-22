@@ -113,8 +113,8 @@ pub fn execute(
         ExecuteMsg::RemoveLiquidityByShare { share, assets_min_amount } => {
             remove_liquidity_by_share(deps, env, info, share, assets_min_amount)
         }
-        ExecuteMsg::RemoveLiquidityByToken { token_amounts, max_burn_share } => {
-            remove_liquidity_by_token(deps, env, info, token_amounts, max_burn_share)
+        ExecuteMsg::RemoveLiquidityByToken { assets, max_burn_share } => {
+            remove_liquidity_by_token(deps, env, info, assets, max_burn_share)
         }
     }
 }
@@ -338,7 +338,7 @@ pub fn remove_liquidity_by_token(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    token_amounts: Vec<Uint128>,
+    assets: Vec<Asset>,
     max_burn_share: Option<Uint128>,
 ) -> Result<Response, ContractError> {
     // Get stable pool info
@@ -360,8 +360,13 @@ pub fn remove_liquidity_by_token(
         .iter()
         .map(|pool| pool.amount)
         .collect::<Vec<Uint128>>();
+    // Get asset amount from assets
+    let assets_amount: Vec<Uint128> = assets
+        .iter()
+        .map(|asset| asset.amount)
+        .collect::<Vec<Uint128>>();
     // Get the amount of LP token that user will burn
-    let share = amp_factor_info.compute_lp_amount_for_withdraw(&token_amounts, &old_c_amounts, shares_total_supply, Uint128::zero()).unwrap().0;
+    let share = amp_factor_info.compute_lp_amount_for_withdraw(&assets_amount, &old_c_amounts, shares_total_supply, Uint128::zero()).unwrap().0;
     // Check the amount of LP token that user will burn is less than the amount of LP token that user has
     if share > sender_share_balance {
         return Err(ContractError::Std(StdError::generic_err(
@@ -387,7 +392,7 @@ pub fn remove_liquidity_by_token(
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: info.sender.to_string(),
-                    amount: token_amounts[i],
+                    amount: assets[i].amount,
                 })?,
                 funds: vec![],
             }));
@@ -424,7 +429,7 @@ pub fn remove_liquidity_by_token(
         ("action", "remove_liquidity_by_token"),
         ("sender", info.sender.as_str()),
         ("share", &share.to_string()),
-        ("assets", &format!("{}, {}", token_amounts[0], token_amounts[1])),
+        ("assets", &format!("{}, {}", assets[0].amount, assets[1].amount)),
     ]))
 
 }

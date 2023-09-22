@@ -30,10 +30,12 @@ mod tests {
 
         use super::*;
         // Create a stable swap pool with 3 tokens USDC, USDT, BUSD
-        // Add liquidity to the pool (1 USDC, 1 USDT, 1 BUSD)
-        // Add liquidity to the pool one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
-        // Withdraw liquidity from the pool by 50% of Share
+        // Provide liquidity to the pool (1 USDC, 1 USDT, 1 BUSD)
+        // Provide liquidity to the pool one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+        // Remove liquidity by Share from the pool by 50% of Share (250_000 LP Token)
         // -> ADMIN should get (50_000.5 USDC, 100_000.5 USDT, 100_000.5 BUSD)
+        // Remove liquidity by Token from the pool by 25_000 USDC, 50_000 USDT, 50_000 BUSD
+        // -> ADMIN should get (25_000 USDC, 50_000 USDT, 50_000 BUSD) and burn 125_000 LP Token
         #[test]
         fn test_add_liquidity_pool_3_tokens() {
             // get integration test app and contracts
@@ -374,7 +376,7 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // Withdraw liquidity from the pool
+            // Withdraw liquidity by share from the pool
             let withdraw_liquidity_msg = StablePoolExecuteMsg::RemoveLiquidityByShare {
                 share: Uint128::from(250_000_771_316u128),
                 assets_min_amount: vec![
@@ -421,6 +423,199 @@ mod tests {
                 }
             );
 
+            // Query USDT Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdt_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert USDT Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(
+                        MOCK_1_000_000_000_USDT
+                        - 1 * DECIMAL_6
+                        - 200_000u128 * DECIMAL_6
+                        + 100_000_499_999u128),
+                }
+            );
+
+            // Query BUSD Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    busd_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert BUSD Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(
+                        MOCK_1_000_000_000_BUSD
+                        - 1 * DECIMAL_6
+                        - 200_000u128 * DECIMAL_6
+                        + 100_000_499_999u128),
+                }
+            );
+
+            // Query LP Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert LP Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(250_000_771_317u128),
+                }
+            );
+
+            // Withdraw liquidity by token from the pool
+            let withdraw_liquidity_msg = StablePoolExecuteMsg::RemoveLiquidityByToken {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(25_000u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(50_000u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(50_000u128 * DECIMAL_6),
+                    },
+                ],
+                max_burn_share: None,
+            };
+
+            // Execute withdraw liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &withdraw_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query USDC Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert USDC Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(
+                        MOCK_1_000_000_000_USDC
+                        - 1 * DECIMAL_6
+                        - 100_000u128 * DECIMAL_6
+                        + 50_000_499_999u128
+                        + 25_000u128 * DECIMAL_6),
+                }
+            );
+
+            // Query USDT Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdt_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert USDT Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(
+                        MOCK_1_000_000_000_USDT
+                        - 1 * DECIMAL_6
+                        - 200_000u128 * DECIMAL_6
+                        + 100_000_499_999u128
+                        + 50_000 * DECIMAL_6),
+                }
+            );
+
+            // Query BUSD Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    busd_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert BUSD Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(
+                        MOCK_1_000_000_000_BUSD
+                        - 1 * DECIMAL_6
+                        - 200_000u128 * DECIMAL_6
+                        + 100_000_499_999u128
+                        + 50_000 * DECIMAL_6),
+                }
+            );
+
+            // Query LP Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert LP Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(125_001_135_663u128),
+                }
+            );
 
         }
     }
