@@ -147,4 +147,58 @@ impl AmpFactor{
         }
     }
 
+    /// Compute the amount of LP tokens to burn after withdrawing liquidity
+    /// given token_out user want get and total tokens in pool and lp token supply
+    /// all amounts are in comparable precision
+    pub fn compute_lp_amount_for_withdraw(
+        &self,
+        withdraw_c_amounts: &Vec<Uint128>, // withdraw tokens in comparable precision
+        old_c_amounts: &Vec<Uint128>, // current in-pool tokens in comparable precision
+        pool_token_supply: Uint128, // current share supply
+        _fees: Uint128, // fees in decimal
+    ) -> Option<(Uint128, Uint128)> {
+        let n_coins = old_c_amounts.len();
+        // Initial invariant, D0
+        let d_0 = self.compute_d(old_c_amounts)?;
+
+        // Real invariant after withdraw, D1
+        let mut new_balances = vec![Uint128::zero(); n_coins];
+        for (index, value) in withdraw_c_amounts.iter().enumerate() {
+            new_balances[index] = old_c_amounts[index].checked_sub(*value).unwrap();
+        }
+
+        let d_1 = self.compute_d(&new_balances)?;
+
+        // compare ideal token portion from D1 with withdraws, to calculate diff fee.
+        if d_1 >= d_0 {
+            None
+        } else {
+            // Recalculate the invariant accounting for fees
+            for i in 0..new_balances.len() {
+                let ideal_balance = d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
+                let difference = if ideal_balance > Decimal256::from_uint256(Uint256::from(new_balances[i])) {
+                    ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
+                } else {
+                    Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
+                };
+                // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
+                // new_balances[i] = new_balances[i] - fee;
+            }
+
+            let d_2 = self.compute_d(&new_balances)?;
+
+            // d0 > d1 > d2
+            // (d0 - d2) => burn_shares (plus fee),
+            // (d0 - d1) => burn_shares (without fee),
+            // (d1 - d2) => fee part,
+            // burn_shares = diff_shares + fee part
+            let burn_shares: Uint256 = (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_0 - d_2) / d_0) * Uint256::one();
+            let diff_shares: Uint256 = (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_0 - d_1) / d_0) * Uint256::one();
+
+            Some((burn_shares.into(), (burn_shares - diff_shares).into()))
+        }
+
+    }
+
+
 }

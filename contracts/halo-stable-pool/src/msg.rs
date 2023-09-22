@@ -33,6 +33,10 @@ pub enum ExecuteMsg {
         share: Uint128,
         assets_min_amount: Vec<Uint128>,
     },
+    RemoveLiquidityByToken {
+        token_amounts: Vec<Uint128>,
+        max_burn_share: Option<Uint128>,
+    },
 }
 
 #[cw_serde]
