@@ -251,7 +251,7 @@ pub fn remove_liquidity_by_share(
     env: Env,
     info: MessageInfo,
     share: Uint128,
-    assets_min_amount: Vec<Uint128>,
+    assets_min_amount: Option<Vec<Uint128>>,
 ) -> Result<Response, ContractError> {
     // Get stable pool info
     let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
@@ -272,11 +272,13 @@ pub fn remove_liquidity_by_share(
         .collect::<StdResult<Vec<Uint128>>>()?;
 
     // Check the amount of assets that user will receive is greater than the minimum amount of assets that user wants to receive
-    for (i, asset_amount) in assets_amount.iter().enumerate() {
-        if *asset_amount <= assets_min_amount[i] {
-            return Err(ContractError::Std(StdError::generic_err(
-                "Invalid minimum amount of assets",
-            )));
+    if let Some(assets_min_amount) = assets_min_amount {
+        for (i, asset_min_amount) in assets_min_amount.iter().enumerate() {
+            if assets_amount[i] < *asset_min_amount {
+                return Err(ContractError::Std(StdError::generic_err(
+                    "Insufficient asset amount",
+                )));
+            }
         }
     }
 

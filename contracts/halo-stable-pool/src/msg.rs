@@ -31,7 +31,7 @@ pub enum ExecuteMsg {
     },
     RemoveLiquidityByShare {
         share: Uint128,
-        assets_min_amount: Vec<Uint128>,
+        assets_min_amount: Option<Vec<Uint128>>,
     },
     RemoveLiquidityByToken {
         assets: Vec<Asset>,

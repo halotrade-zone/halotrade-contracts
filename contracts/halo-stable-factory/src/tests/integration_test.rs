@@ -379,11 +379,7 @@ mod tests {
             // Withdraw liquidity by share from the pool
             let withdraw_liquidity_msg = StablePoolExecuteMsg::RemoveLiquidityByShare {
                 share: Uint128::from(250_000_771_316u128),
-                assets_min_amount: vec![
-                    Uint128::from(0u128),
-                    Uint128::from(0u128),
-                    Uint128::from(0u128),
-                ],
+                assets_min_amount: None,
             };
 
             // Execute withdraw liquidity
