@@ -197,8 +197,71 @@ impl AmpFactor{
 
             Some((burn_shares.into(), (burn_shares - diff_shares).into()))
         }
-
     }
 
+    /// Compute new amount of token 'y' with new amount of token 'x'
+    /// return new y_token amount according to the equation
+    pub fn compute_y(
+        &self,
+        x_c_amount: Uint128, // new x_token amount in comparable precision,
+        current_c_amounts: &Vec<Uint128>, // current in-pool tokens in comparable precision
+        index_x: usize, // index of x_token
+        index_y: usize, // index of y_token
+    ) -> Option<Decimal256> {
+        let n_coins: u32 = (current_c_amounts.len() as u32).into();
+        let amp_factor = self.compute_amp_factor()?;
+        let ann = Uint256::from(amp_factor.checked_mul(n_coins.checked_pow(n_coins)?.into()).unwrap());
+        // invariant
+        let d = self.compute_d(current_c_amounts)?;
+        let mut s_ = Decimal256::from_uint256(Uint256::from(x_c_amount));
+        let mut c = d * d / Decimal256::from_uint256(Uint256::from(x_c_amount));
+        for (idx, c_amount) in current_c_amounts.iter().enumerate() {
+            if idx != index_x && idx != index_y {
+                s_ += Decimal256::from_uint256(Uint256::from(*c_amount));
+                c = c * d / Decimal256::from_uint256(Uint256::from(*c_amount));
+            }
+        }
+        c = c * d / Decimal256::from_uint256(ann * Uint256::from(Uint128::from(n_coins.checked_pow(n_coins)?)));
 
+        let b = d / Decimal256::from_uint256(Uint256::from(ann)) + s_;
+
+        // Solve for y by approximating: y**2 + b*y = c
+        let mut y_prev;
+        let mut y = d;
+        for _ in 0..256 {
+            y_prev = y;
+            // $ y_{k+1} = \frac{y_k^2 + c}{2y_k + b - D} $
+            let y_numerator = y * y + c;
+            let y_denominator = y * Decimal256::from_uint256(Uint256::from(2u128)) + b - d;
+            y = y_numerator / y_denominator;
+            if y > y_prev {
+                if y - y_prev <= Decimal256::one() {
+                    break;
+                }
+            } else if y_prev - y <= Decimal256::one() {
+                break;
+            }
+        }
+        Some(y.into())
+    }
+
+    /// Compute amount of token user will receive after swap
+    pub fn swap_to(
+        &self,
+        token_in_idx: usize, // index of token in token vector
+        token_in_amount: Uint128, // amount of token in comparable precision
+        token_out_idx: usize, // index of token out token vector
+        current_c_amounts: &Vec<Uint128>, // current in-pool tokens in comparable precision
+        _swap_fee: Decimal256, // swap fee in decimal
+    ) -> Option<Uint128> {
+        let y: Uint256 = self.compute_y(
+            token_in_amount + current_c_amounts[token_in_idx],
+            current_c_amounts,
+            token_in_idx,
+            token_out_idx,
+        ).unwrap() * Uint256::one();
+
+        let dy: Uint128 = current_c_amounts[token_out_idx].checked_sub(y.into()).unwrap().checked_sub(Uint128::one()).unwrap_or(Uint128::zero());
+        Some(dy)
+    }
 }
