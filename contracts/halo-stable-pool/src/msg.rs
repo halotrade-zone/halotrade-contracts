@@ -1,6 +1,6 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Decimal, Uint128, Addr};
 use haloswap::asset::{LPTokenInfo, AssetInfo, Asset};
 
 use crate::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
@@ -36,6 +36,13 @@ pub enum ExecuteMsg {
     RemoveLiquidityByToken {
         assets: Vec<Asset>,
         max_burn_share: Option<Uint128>,
+    },
+    StableSwap {
+        offer_asset: Asset,
+        ask_asset: AssetInfo,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<Addr>,
     },
 }
 

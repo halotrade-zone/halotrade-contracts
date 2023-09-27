@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -115,6 +118,9 @@ pub fn execute(
         }
         ExecuteMsg::RemoveLiquidityByToken { assets, max_burn_share } => {
             remove_liquidity_by_token(deps, env, info, assets, max_burn_share)
+        }
+        ExecuteMsg::StableSwap { offer_asset, ask_asset, belief_price, max_spread, to } => {
+            stable_swap(deps, env, info, offer_asset, ask_asset, belief_price, max_spread, to)
         }
     }
 }
@@ -434,6 +440,74 @@ pub fn remove_liquidity_by_token(
         ("assets", &format!("{}", assets.iter().map(|asset| asset.to_string()).collect::<Vec<String>>().join(","))),
     ]))
 
+}
+
+pub fn stable_swap(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    offer_asset: Asset,
+    ask_asset: AssetInfo,
+    belief_price: Option<Decimal>,
+    max_spread: Option<Decimal>,
+    to: Option<Addr>,
+) -> Result<Response, ContractError> {
+    offer_asset.assert_sent_native_token_balance(&info)?;
+
+    // Get stable pool info
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get the amount of assets in the stable pool
+    let pools: Vec<Asset> = stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get amp factor info
+    let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
+    // Get index of offer asset
+    let offer_asset_index = pools
+        .iter()
+        .position(|pool| pool.info == offer_asset.info)
+        .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
+    // Get amount of offer asset
+    let offer_asset_amount = offer_asset.amount;
+    // Get index of ask asset
+    let ask_asset_index = pools
+        .iter()
+        .position(|pool| pool.info == ask_asset)
+        .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
+    // Get the amount of assets in the stable pool
+    let old_c_amounts: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| pool.amount)
+        .collect::<Vec<Uint128>>();
+
+    // Calculate the amount of assets that user will receive
+    let return_amount: Uint128 = amp_factor_info.swap_to(
+        offer_asset_index,
+        offer_asset_amount,
+        ask_asset_index,
+        &old_c_amounts,
+        Decimal256::from_str("0.003").unwrap(),
+    ).unwrap();
+
+    let return_asset = Asset {
+        info: pools[ask_asset_index].info.clone(),
+        amount: return_amount,
+    };
+
+    let receiver = to.unwrap_or_else(|| info.sender.clone());
+
+    // Send the amount of assets that user will receive to the sender
+    let mut messages: Vec<CosmosMsg> = vec![];
+    if !return_amount.is_zero() {
+        messages.push(return_asset.into_msg(receiver.clone())?);
+    }
+
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
+        ("action", "stable_swap"),
+        ("sender", info.sender.as_str()),
+        ("receiver", receiver.as_str()),
+        ("offer_asset", &offer_asset.to_string()),
+        ("ask_asset", &ask_asset.to_string()),
+        ("return_amount", &return_amount.to_string()),
+    ]))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
