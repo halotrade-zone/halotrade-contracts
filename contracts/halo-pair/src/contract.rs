@@ -1,6 +1,7 @@
 use crate::assert::{assert_max_spread, assert_slippage_tolerance};
 use crate::state::{Config, COMMISSION_RATE_INFO, CONFIG, PAIR_INFO};
 
+use bignumber::{Decimal256, Uint256};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -248,6 +249,18 @@ pub fn provide_liquidity(
             .map(|a| a.amount)
             .expect("Wrong asset info is given"),
     ];
+
+    // For accurately calculate return values of compute_swap function,
+    // It is required to use Decimal256 type for all division calculations
+    // So the maximum value when offer_pool and ask_pool are multiplied
+    // is the maximum value of Decimal256 which is (2^128 - 1) / 10^18
+    // Check the value of offer_pool * ask_pool is overflowed
+    let pool_0 = Uint256::from(pools[0].amount);
+    let pool_1 = Uint256::from(pools[1].amount);
+    let amount_0 = Uint256::from(deposits[0]);
+    let amount_1 = Uint256::from(deposits[1]);
+
+    Decimal256::from_uint256((pool_0 + amount_0) * (pool_1 + amount_1));
 
     // If the asset is a token, the value of pools[i] is correct. But we must take the token from the user.
     // If the asset is a native token, the amount of native token is already sent with the message to the pool.
