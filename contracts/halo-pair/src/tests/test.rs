@@ -219,7 +219,7 @@ fn proper_initialization() {
 fn provide_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
-        amount: Uint128::from(200u128),
+        amount: Uint128::from(340_282_366_918_000_000_000_000_000_000u128),
     }]);
 
     deps.querier.with_token_balances(&[
@@ -310,6 +310,37 @@ fn provide_liquidity() {
         ContractError::InvalidZeroAmount {} => {}
         _ => panic!("DO NOT ENTER HERE"),
     }
+
+    // successfully provide liquidity in max limit asset amount:
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(340_282_366_923_000_000_000_000_000_000u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(1u128),
+            },
+        ],
+        slippage_tolerance: None,
+        receiver: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(1u128),
+        }],
+    );
+    let res = execute(deps.as_mut(), env, info, msg);
+    assert!(res.is_ok());
 
     // successfully provide liquidity for the exist pool
     let msg = ExecuteMsg::ProvideLiquidity {
@@ -720,6 +751,134 @@ fn provide_liquidity() {
 }
 
 #[test]
+#[should_panic(expected = "arithmetic operation overflow")]
+fn provide_overflow_liquidity() {
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: Uint128::from(340_282_366_918_000_000_000_000_000_000u128),
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
+        ),
+        (&"asset0000".to_string(), &[]),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        requirements: CreatePairRequirements {
+            whitelist: vec![Addr::unchecked("addr0000")],
+            first_asset_minimum: Uint128::zero(),
+            second_asset_minimum: Uint128::zero(),
+        },
+        commission_rate: Decimal256::from_str("0.003").unwrap(),
+        lp_token_info: LPTokenInfo {
+            lp_token_name: "uusd_asset0000_LP".to_string(),
+            lp_token_symbol: "uusd_asset0000_LP".to_string(),
+            lp_token_decimals: None,
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // store liquidity token
+    let reply_msg = Reply {
+        id: 1,
+        result: SubMsgResult::Ok(SubMsgResponse {
+            events: vec![],
+            data: Some(
+                vec![
+                    // binary message which is converted from "liquidity0000" string.
+                    10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
+                ]
+                .into(),
+            ),
+        }),
+    };
+
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
+
+    // verify failed provide liquidity with invalid asset amount:
+    // providing free token (one of the deposits is zero)
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(100u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(0u128),
+            },
+        ],
+        slippage_tolerance: None,
+        receiver: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(0u128),
+        }],
+    );
+    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
+    match res {
+        ContractError::InvalidZeroAmount {} => {}
+        _ => panic!("DO NOT ENTER HERE"),
+    }
+
+    // verify failed provide liquidity with over limit asset amount:
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(340_282_366_924_000_000_000_000_000_000u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(1u128),
+            },
+        ],
+        slippage_tolerance: None,
+        receiver: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(1u128),
+        }],
+    );
+    let _res = execute(deps.as_mut(), env, info, msg);
+}
+
+#[test]
 fn withdraw_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
@@ -1044,7 +1203,6 @@ fn try_token_to_native() {
     let total_share = Uint128::from(20_000_000_000u128);
     let asset_pool_amount = Uint128::from(30_000_000_000u128);
     let collateral_pool_amount = Uint128::from(20_000_000_000u128);
-    let exchange_rate = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
     let offer_amount = Uint128::from(1_500_000_000u128);
 
     let mut deps = mock_dependencies(&[Coin {
@@ -1226,7 +1384,7 @@ fn try_token_to_native() {
     // current price is 1.5, so expected return without spread is 1000
     // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500)
     let expected_ret_amount = Uint128::from(952_380_952u128);
-    let expected_spread_amount = (offer_amount * exchange_rate)
+    let expected_spread_amount = (collateral_pool_amount * offer_amount / asset_pool_amount)
         .checked_sub(expected_ret_amount)
         .unwrap();
     let expected_commission_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
