@@ -467,6 +467,22 @@ pub fn stable_swap(
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
     // Get amount of offer asset
     let offer_asset_amount = offer_asset.amount;
+    let mut messages: Vec<CosmosMsg> = vec![];
+    // Transfer offer_asset from sender to stable pool contract
+    // If the asset 'offer_asset' is a token, then we need to execute TransferFrom msg to receive funds
+    // If the asset 'offer_asset' is native token, the amount of native token is already sent with the message to the pool.
+    if let AssetInfo::Token { contract_addr, .. } = &offer_asset.info {
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: offer_asset_amount,
+            })?,
+            funds: vec![],
+        }));
+    }
+
     // Get index of ask asset
     let ask_asset_index = pools
         .iter()
@@ -495,7 +511,6 @@ pub fn stable_swap(
     let receiver = to.unwrap_or_else(|| info.sender.clone());
 
     // Send the amount of assets that user will receive to the sender
-    let mut messages: Vec<CosmosMsg> = vec![];
     if !return_amount.is_zero() {
         messages.push(return_asset.into_msg(receiver.clone())?);
     }
