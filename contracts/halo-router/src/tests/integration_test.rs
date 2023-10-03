@@ -231,7 +231,7 @@ mod tests {
                         first_asset_minimum: Uint128::zero(),
                         second_asset_minimum: Uint128::zero(),
                     },
-                    // Verify the default commission rate is 0.3%
+                    // Verify the default commission rate is 3%
                     commission_rate: Decimal256::from_str("0.03").unwrap(),
                 }
             );
@@ -1141,7 +1141,7 @@ mod tests {
                         first_asset_minimum: Uint128::zero(),
                         second_asset_minimum: Uint128::zero(),
                     },
-                    // Verify the default commission rate is 0.3%
+                    // Verify the default commission rate is 3%
                     commission_rate: Decimal256::from_str("0.03").unwrap(),
                 }
             );

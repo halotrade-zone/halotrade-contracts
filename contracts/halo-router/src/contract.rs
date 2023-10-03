@@ -272,6 +272,19 @@ fn simulate_swap_operations(
     }
 
     let mut offer_amount = offer_amount;
+
+    // load platform info
+    let platform_info = PLATFORM_INFO.load(deps.storage)?;
+    if platform_info.fee > 0 {
+        offer_amount = offer_amount
+            .checked_sub(
+                offer_amount
+                    .checked_multiply_ratio(platform_info.fee, 100u128)
+                    .unwrap(),
+            )
+            .unwrap();
+    }
+
     for operation in operations.into_iter() {
         match operation {
             SwapOperation::HaloSwap {
@@ -352,7 +365,7 @@ fn reverse_simulate_return_amount(
         &[offer_asset_info, ask_asset_info.clone()],
     )?;
 
-    let res = reverse_simulate(
+    let res: haloswap::pair::ReverseSimulationResponse = reverse_simulate(
         &deps.querier,
         Addr::unchecked(pair_info.contract_addr),
         &Asset {
@@ -361,7 +374,20 @@ fn reverse_simulate_return_amount(
         },
     )?;
 
-    Ok(res.offer_amount)
+    // load platform info
+    let platform_info = PLATFORM_INFO.load(deps.storage)?;
+    if platform_info.fee > 0 {
+        Ok(res
+            .offer_amount
+            .checked_add(
+                res.offer_amount
+                    .checked_multiply_ratio(platform_info.fee, 100u128)
+                    .unwrap(),
+            )
+            .unwrap())
+    } else {
+        Ok(res.offer_amount)
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
