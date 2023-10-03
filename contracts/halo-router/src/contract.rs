@@ -2,19 +2,21 @@
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, Uint128, WasmMsg,
+    coins, from_binary, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 
 use crate::assert::{assert_minium_receive, assert_operations};
 use crate::operations::execute_swap_operation;
-use crate::state::{Config, CONFIG};
+use crate::state::{Config, PlatformInfo, CONFIG, PLATFORM_INFO};
 
 use cw20::Cw20ReceiveMsg;
 use haloswap::asset::{Asset, AssetInfo, PairInfo};
 use haloswap::pair::SimulationResponse;
-use haloswap::querier::{query_pair_info, reverse_simulate, simulate};
+use haloswap::querier::{
+    query_balance, query_pair_info, query_token_balance, reverse_simulate, simulate,
+};
 use haloswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
@@ -28,7 +30,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -37,6 +39,14 @@ pub fn instantiate(
         deps.storage,
         &Config {
             halo_factory: deps.api.addr_canonicalize(&msg.halo_factory)?,
+        },
+    )?;
+
+    PLATFORM_INFO.save(
+        deps.storage,
+        &PlatformInfo {
+            fee: 1,
+            collector: info.sender,
         },
     )?;
 
@@ -144,6 +154,45 @@ pub fn execute_swap_operations(
     let to = if let Some(to) = to { to } else { sender };
     let target_asset_info = operations.last().unwrap().get_target_asset_info();
 
+    // collect platform fee
+    let mut res: Response = Response::new();
+    let platform_info = PLATFORM_INFO.load(deps.storage)?;
+    if platform_info.fee > 0 {
+        let offer_asset_info = operations.first().unwrap().get_offer_asset_info();
+        match offer_asset_info {
+            AssetInfo::NativeToken { denom } => {
+                let offer_balance =
+                    query_balance(&deps.querier, env.contract.address.clone(), denom.clone())?;
+                let fee_amount = offer_balance
+                    .checked_multiply_ratio(platform_info.fee, 100u128)
+                    .unwrap();
+                res = res.add_message(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: platform_info.collector.to_string(),
+                    amount: coins(fee_amount.into(), denom),
+                }));
+            }
+            AssetInfo::Token { contract_addr } => {
+                let offer_balance = query_token_balance(
+                    &deps.querier,
+                    deps.api.addr_validate(contract_addr.as_str())?,
+                    env.contract.address.clone(),
+                )
+                .unwrap();
+                let fee_amount = offer_balance
+                    .checked_multiply_ratio(platform_info.fee, 100u128)
+                    .unwrap();
+                res = res.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr,
+                    msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                        recipient: platform_info.collector.to_string(),
+                        amount: fee_amount,
+                    })?,
+                    funds: vec![],
+                }));
+            }
+        };
+    }
+
     let mut operation_index = 0;
     let mut messages: Vec<CosmosMsg> = operations
         .into_iter()
@@ -180,7 +229,7 @@ pub fn execute_swap_operations(
         }))
     }
 
-    Ok(Response::new().add_messages(messages))
+    Ok(res.add_messages(messages))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

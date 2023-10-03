@@ -23,6 +23,14 @@ impl SwapOperation {
             SwapOperation::HaloSwap { ask_asset_info, .. } => ask_asset_info.clone(),
         }
     }
+
+    pub fn get_offer_asset_info(&self) -> AssetInfo {
+        match self {
+            SwapOperation::HaloSwap {
+                offer_asset_info, ..
+            } => offer_asset_info.clone(),
+        }
+    }
 }
 
 #[cw_serde]
