@@ -57,6 +57,11 @@ pub enum ExecuteMsg {
         minimum_receive: Uint128,
         receiver: String,
     },
+    // Update platform fee
+    UpdatePlatformFee {
+        fee: u64,
+        manager: String,
+    },
 }
 
 #[cw_serde]
@@ -83,6 +88,8 @@ pub enum QueryMsg {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
+    #[returns(u64)]
+    PlatformFee {},
 }
 
 // We define a custom struct for each query response

@@ -11,7 +11,7 @@ pub struct Config {
 #[cw_serde]
 pub struct PlatformInfo {
     pub fee: u64,
-    pub collector: Addr,
+    pub manager: Addr,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");

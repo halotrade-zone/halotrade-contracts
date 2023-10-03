@@ -46,7 +46,7 @@ pub fn instantiate(
         deps.storage,
         &PlatformInfo {
             fee: 1,
-            collector: info.sender,
+            manager: info.sender,
         },
     )?;
 
@@ -96,6 +96,22 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             minimum_receive,
             deps.api.addr_validate(&receiver)?,
         ),
+        ExecuteMsg::UpdatePlatformFee { fee, manager } => {
+            // only manager can update platform fee
+            let mut platform_info = PLATFORM_INFO.load(deps.storage)?;
+            if platform_info.manager != info.sender {
+                return Err(StdError::generic_err("unauthorized"));
+            }
+            platform_info.fee = fee;
+            platform_info.manager = deps.api.addr_validate(&manager)?;
+            PLATFORM_INFO.save(deps.storage, &platform_info)?;
+
+            Ok(Response::new().add_attributes([
+                ("action", "update_platform_fee"),
+                ("fee", &fee.to_string()),
+                ("manager", &manager),
+            ]))
+        }
     }
 }
 
@@ -167,7 +183,7 @@ pub fn execute_swap_operations(
                     .checked_multiply_ratio(platform_info.fee, 100u128)
                     .unwrap();
                 res = res.add_message(CosmosMsg::Bank(BankMsg::Send {
-                    to_address: platform_info.collector.to_string(),
+                    to_address: platform_info.manager.to_string(),
                     amount: coins(fee_amount.into(), denom),
                 }));
             }
@@ -184,7 +200,7 @@ pub fn execute_swap_operations(
                 res = res.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr,
                     msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                        recipient: platform_info.collector.to_string(),
+                        recipient: platform_info.manager.to_string(),
                         amount: fee_amount,
                     })?,
                     funds: vec![],
@@ -246,6 +262,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&reverse_simulate_swap_operations(
             deps, ask_amount, operations,
         )?),
+        QueryMsg::PlatformFee {} => to_binary(&query_platform_fee(deps)?),
     }
 }
 
@@ -350,6 +367,11 @@ fn reverse_simulate_swap_operations(
     }
 
     Ok(SimulateSwapOperationsResponse { amount: ask_amount })
+}
+
+pub fn query_platform_fee(deps: Deps) -> StdResult<u64> {
+    let platform_info = PLATFORM_INFO.load(deps.storage)?;
+    Ok(platform_info.fee)
 }
 
 fn reverse_simulate_return_amount(
