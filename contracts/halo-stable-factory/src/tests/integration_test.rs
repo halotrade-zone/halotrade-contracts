@@ -624,6 +624,9 @@ mod tests {
         // -> ADMIN should get 100 USDC
         // ADMIN swap 50_000 USDC to USDT
         // -> ADMIN should get 50_000 USDT
+        // Provide liquidity to the pool one more time (100_000_000 USDC, 150_000_000 USDT, 200_000_000 BUSD)
+        // ADMIN swap 10_000_000 USDC to BUSD
+        // -> ADMIN should get 10_000_000 BUSD
 
         #[test]
         fn test_swap_independently_without_rounter() {
@@ -991,6 +994,8 @@ mod tests {
                 &[],
             );
 
+            assert!(response.is_ok());
+
             // Query USDC Balance of ADMIN after swap
             let usdc_balance_after_swap: BalanceResponse = app
                 .wrap()
@@ -1056,6 +1061,8 @@ mod tests {
                 &swap_msg,
                 &[],
             );
+
+            assert!(response.is_ok());
 
             // Query USDT Balance of ADMIN after swap
             let usdt_balance_after_swap: BalanceResponse = app
@@ -1123,6 +1130,8 @@ mod tests {
                 &swap_msg,
                 &[],
             );
+
+            assert!(response.is_ok());
 
             // Query BUSD Balance of ADMIN after swap
             let busd_balance_after_swap: BalanceResponse = app
@@ -1192,6 +1201,8 @@ mod tests {
                 &[],
             );
 
+            assert!(response.is_ok());
+
             // Query USDC Balance of ADMIN after swap
             let usdc_balance_after_swap: BalanceResponse = app
                 .wrap()
@@ -1238,8 +1249,120 @@ mod tests {
                     + 50_001_194_511u128), // 50_000 USDT received from the stable pool
             );
 
+            // provide liquidity to the pool one more time
+            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(100_000_000u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(150_000_000u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200_000_000u128 * DECIMAL_6),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
+
+            // Execute provide liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
 
             assert!(response.is_ok());
+
+            // ADMIN swap 10_000_000 USDC to BUSD
+            let swap_msg = StablePoolExecuteMsg::StableSwap {
+                offer_asset: Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: usdc_token_contract.clone(),
+                    },
+                    amount: Uint128::from(10_000_000u128 * DECIMAL_6),
+                },
+                ask_asset: AssetInfo::Token {
+                    contract_addr: busd_token_contract.clone(),
+                },
+                max_spread: None,
+                belief_price: None,
+                to: None,
+            };
+
+            // Execute swap
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &swap_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Query USDC Balance of ADMIN after swap
+            let usdc_balance_after_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDC Balance of ADMIN after swap
+            assert_eq!(
+                usdc_balance_after_swap.balance,
+                Uint128::from(
+                    MOCK_1_000_000_000_USDC
+                    - 1 * DECIMAL_6
+                    - 100_000u128 * DECIMAL_6
+                    - 1 * DECIMAL_6
+                    + 99_994_634u128
+                    - 50_000 * DECIMAL_6
+                    - 100_000_000u128 * DECIMAL_6
+                    - 10_000_000 * DECIMAL_6), // 100_000_000 USDC transferred to the stable pool
+            );
+
+            // Query BUSD Balance of ADMIN after swap
+            let busd_balance_after_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    busd_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert BUSD Balance of ADMIN after swap
+            assert_eq!(
+                busd_balance_after_swap.balance,
+                Uint128::from(
+                    MOCK_1_000_000_000_BUSD
+                    - 1 * DECIMAL_6
+                    - 200_000u128 * DECIMAL_6
+                    + 8_999_999u128
+                    - 100 * DECIMAL_6
+                    - 200_000_000u128 * DECIMAL_6
+                    + 10_000_403_317_233u128), // 10_000_000 BUSD received from the stable pool
+            );
+
         }
     }
 }
