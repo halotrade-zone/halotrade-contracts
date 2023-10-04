@@ -1,6 +1,6 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Uint128, Decimal};
+use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
 
 use crate::asset::AssetInfo;
