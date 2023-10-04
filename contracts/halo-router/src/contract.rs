@@ -1,9 +1,12 @@
+use std::str::FromStr;
+
+use bignumber::{Decimal256, Uint256};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
+    coins, from_binary, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut,
+    Env, MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 
@@ -45,7 +48,7 @@ pub fn instantiate(
     PLATFORM_INFO.save(
         deps.storage,
         &PlatformInfo {
-            fee: 1,
+            fee: Decimal256::from_str("0.01").unwrap(),
             manager: info.sender,
         },
     )?;
@@ -173,15 +176,14 @@ pub fn execute_swap_operations(
     // collect platform fee
     let mut res: Response = Response::new();
     let platform_info = PLATFORM_INFO.load(deps.storage)?;
-    if platform_info.fee > 0 {
+    if platform_info.fee > Decimal256::zero() {
         let offer_asset_info = operations.first().unwrap().get_offer_asset_info();
         match offer_asset_info {
             AssetInfo::NativeToken { denom } => {
                 let offer_balance =
                     query_balance(&deps.querier, env.contract.address.clone(), denom.clone())?;
-                let fee_amount = offer_balance
-                    .checked_multiply_ratio(platform_info.fee, 100u128)
-                    .unwrap();
+                let fee_amount = Uint256::from(offer_balance) * platform_info.fee;
+
                 res = res.add_message(CosmosMsg::Bank(BankMsg::Send {
                     to_address: platform_info.manager.to_string(),
                     amount: coins(fee_amount.into(), denom),
@@ -194,14 +196,12 @@ pub fn execute_swap_operations(
                     env.contract.address.clone(),
                 )
                 .unwrap();
-                let fee_amount = offer_balance
-                    .checked_multiply_ratio(platform_info.fee, 100u128)
-                    .unwrap();
+                let fee_amount = Uint256::from(offer_balance) * platform_info.fee;
                 res = res.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr,
                     msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
                         recipient: platform_info.manager.to_string(),
-                        amount: fee_amount,
+                        amount: fee_amount.into(),
                     })?,
                     funds: vec![],
                 }));
@@ -292,13 +292,9 @@ fn simulate_swap_operations(
 
     // load platform info
     let platform_info = PLATFORM_INFO.load(deps.storage)?;
-    if platform_info.fee > 0 {
+    if platform_info.fee > Decimal256::zero() {
         offer_amount = offer_amount
-            .checked_sub(
-                offer_amount
-                    .checked_multiply_ratio(platform_info.fee, 100u128)
-                    .unwrap(),
-            )
+            .checked_sub((Uint256::from(offer_amount) * platform_info.fee).into())
             .unwrap();
     }
 
@@ -369,7 +365,7 @@ fn reverse_simulate_swap_operations(
     Ok(SimulateSwapOperationsResponse { amount: ask_amount })
 }
 
-pub fn query_platform_fee(deps: Deps) -> StdResult<u64> {
+pub fn query_platform_fee(deps: Deps) -> StdResult<Decimal256> {
     let platform_info = PLATFORM_INFO.load(deps.storage)?;
     Ok(platform_info.fee)
 }
@@ -398,14 +394,10 @@ fn reverse_simulate_return_amount(
 
     // load platform info
     let platform_info = PLATFORM_INFO.load(deps.storage)?;
-    if platform_info.fee > 0 {
+    if platform_info.fee > Decimal256::zero() {
         Ok(res
             .offer_amount
-            .checked_add(
-                res.offer_amount
-                    .checked_multiply_ratio(platform_info.fee, 100u128)
-                    .unwrap(),
-            )
+            .checked_add((Uint256::from(res.offer_amount) * platform_info.fee).into())
             .unwrap())
     } else {
         Ok(res.offer_amount)

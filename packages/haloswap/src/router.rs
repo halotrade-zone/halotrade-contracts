@@ -1,5 +1,6 @@
+use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Uint128, Decimal};
 use cw20::Cw20ReceiveMsg;
 
 use crate::asset::AssetInfo;
@@ -59,7 +60,7 @@ pub enum ExecuteMsg {
     },
     // Update platform fee
     UpdatePlatformFee {
-        fee: u64,
+        fee: Decimal256,
         manager: String,
     },
 }
