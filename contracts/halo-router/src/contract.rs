@@ -5,8 +5,8 @@ use bignumber::{Decimal256, Uint256};
 use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
+    coins, from_binary, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 
