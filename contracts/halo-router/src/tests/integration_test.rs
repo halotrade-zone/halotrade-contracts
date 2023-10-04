@@ -231,7 +231,7 @@ mod tests {
                         first_asset_minimum: Uint128::zero(),
                         second_asset_minimum: Uint128::zero(),
                     },
-                    // Verify the default commission rate is 0.3%
+                    // Verify the default commission rate is 3%
                     commission_rate: Decimal256::from_str("0.03").unwrap(),
                 }
             );
@@ -384,7 +384,7 @@ mod tests {
                         contract_addr: cw20_token_contract.clone(),
                     },
                 }],
-                minimum_receive: Some(Uint128::from(485u128)),
+                minimum_receive: Some(Uint128::from(480u128)),
                 to: None,
             };
 
@@ -416,14 +416,14 @@ mod tests {
                                 denom: NATIVE_DENOM_2.to_string(),
                             },
                             // Verify the native token amount is increased
-                            amount: Uint128::from(2001000u128),
+                            amount: Uint128::from(2000990u128),
                         },
                         Asset {
                             info: AssetInfo::Token {
                                 contract_addr: "contract2".to_string(),
                             },
                             // Verify the cw20 token amount is decreased
-                            amount: Uint128::from(999515u128),
+                            amount: Uint128::from(999520u128),
                         },
                     ],
                     // Verify the total share amount is reserved 1 uLP
@@ -446,7 +446,7 @@ mod tests {
             assert_eq!(
                 response,
                 BalanceResponse {
-                    balance: Uint128::from(999000485u128),
+                    balance: Uint128::from(999000480u128),
                 }
             );
 
@@ -567,7 +567,9 @@ mod tests {
                 balance.amount.amount,
                 // USER_1 should lose 2 native token that already reserved for the Pool
                 // and 10000 utaura native token for transaction fee
-                Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT - 2u128 - MOCK_TRANSACTION_FEE * 2)
+                Uint128::from(
+                    MOCK_1000_NATIVE_TOKEN_AMOUNT - 2u128 - MOCK_TRANSACTION_FEE * 2 - 10u128
+                )
             );
         }
 
@@ -1139,7 +1141,7 @@ mod tests {
                         first_asset_minimum: Uint128::zero(),
                         second_asset_minimum: Uint128::zero(),
                     },
-                    // Verify the default commission rate is 0.3%
+                    // Verify the default commission rate is 3%
                     commission_rate: Decimal256::from_str("0.03").unwrap(),
                 }
             );
@@ -1236,7 +1238,7 @@ mod tests {
                         denom: NATIVE_DENOM.to_string(),
                     },
                 }],
-                minimum_receive: Some(Uint128::from(46937u128)),
+                minimum_receive: Some(Uint128::from(46467u128)),
                 to: None,
             };
 

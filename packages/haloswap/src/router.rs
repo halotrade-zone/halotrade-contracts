@@ -23,6 +23,14 @@ impl SwapOperation {
             SwapOperation::HaloSwap { ask_asset_info, .. } => ask_asset_info.clone(),
         }
     }
+
+    pub fn get_offer_asset_info(&self) -> AssetInfo {
+        match self {
+            SwapOperation::HaloSwap {
+                offer_asset_info, ..
+            } => offer_asset_info.clone(),
+        }
+    }
 }
 
 #[cw_serde]
@@ -48,6 +56,11 @@ pub enum ExecuteMsg {
         prev_balance: Uint128,
         minimum_receive: Uint128,
         receiver: String,
+    },
+    // Update platform fee
+    UpdatePlatformFee {
+        fee: u64,
+        manager: String,
     },
 }
 
@@ -75,6 +88,8 @@ pub enum QueryMsg {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
+    #[returns(u64)]
+    PlatformFee {},
 }
 
 // We define a custom struct for each query response
