@@ -42,6 +42,11 @@ pub enum ExecuteMsg {
         denom: String,
         asset_decimals: [u8; 2],
     },
+    /// Update commission rate
+    /// Only owner can execute
+    UpdateCommissionRate {
+        commission_rate: Decimal256,
+    },
 }
 
 #[cw_serde]

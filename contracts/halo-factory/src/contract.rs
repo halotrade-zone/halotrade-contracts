@@ -74,6 +74,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::MigratePair { contract, code_id } => {
             execute_migrate_pair(deps, env, info, contract, code_id)
         }
+        ExecuteMsg::UpdateCommissionRate {
+            contract,
+            commission_rate,
+        } => execute_update_commission_rate(deps, env, info, contract, commission_rate),
     }
 }
 
@@ -340,6 +344,29 @@ pub fn execute_migrate_pair(
             contract_addr: contract,
             new_code_id: code_id,
             msg: to_binary(&PairMigrateMsg {})?,
+        })),
+    )
+}
+
+pub fn execute_update_commission_rate(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    contract: String,
+    commission_rate: Decimal256,
+) -> StdResult<Response> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // permission check
+    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    Ok(
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract,
+            msg: to_binary(&haloswap::pair::ExecuteMsg::UpdateCommissionRate { commission_rate })?,
+            funds: vec![],
         })),
     )
 }
