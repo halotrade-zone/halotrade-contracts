@@ -362,6 +362,20 @@ pub fn execute_update_commission_rate(
         return Err(StdError::generic_err("unauthorized"));
     }
 
+    // update the commission rate for the PAIRS
+    let pair_info = query_pair_info_from_pair(&deps.querier, Addr::unchecked(&contract))?;
+    PAIRS.save(
+        deps.storage,
+        &pair_key(&[
+            pair_info.asset_infos[0].to_raw(deps.api)?,
+            pair_info.asset_infos[1].to_raw(deps.api)?,
+        ]),
+        &PairInfoRaw {
+            commission_rate: Decimal256::from_str(&commission_rate.to_string()).unwrap(),
+            ..pair_info.to_raw(deps.api)?
+        },
+    )?;
+
     Ok(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract,
