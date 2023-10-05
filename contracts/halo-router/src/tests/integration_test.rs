@@ -31,7 +31,9 @@ mod tests {
         use cw_multi_test::Executor;
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
-            pair::{ExecuteMsg, PoolResponse, QueryMsg},
+            pair::{
+                ExecuteMsg, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
+            },
             router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
         };
 
@@ -1005,6 +1007,7 @@ mod tests {
         // Create Pair: MSTR - NATIVE_DENOM Token
         // USER_1 Add Liquidity: 49_867_841_058 AURA - 494_676_638_256_289_699_505_510 MSTR Token
         // USER_1 Swap: 0.49 MSTR -> AURA Token
+        // Update commission rate to 0.05
         #[test]
         fn test_swap_cw20_decimal_18_with_native_decimal_6() {
             // get integration test app and contracts
@@ -1107,7 +1110,7 @@ mod tests {
             let response: PairInfo = app
                 .wrap()
                 .query_wasm_smart(
-                    factory_contract,
+                    factory_contract.clone(),
                     &FactoryQueryMsg::Pair {
                         asset_infos: [
                             AssetInfo::Token {
@@ -1228,6 +1231,58 @@ mod tests {
                 }
             );
 
+            // Query Simulation(offer_asset: 0.5 MSTR)
+            let response: SimulationResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract5".to_string(),
+                    &QueryMsg::Simulation {
+                        offer_asset: Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: mstr_token_contract.clone(),
+                            },
+                            amount: Uint128::from(500000000000000000u128),
+                        },
+                    },
+                )
+                .unwrap();
+
+            // Assert Simulation
+            assert_eq!(
+                response,
+                SimulationResponse {
+                    return_amount: Uint128::from(48892u128),
+                    spread_amount: Uint128::from(0u128),
+                    commission_amount: Uint128::from(1512u128),
+                }
+            );
+
+            // Query Reverse Simulation(ask_asset: 0.5 MSTR)
+            let response: ReverseSimulationResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract5".to_string(),
+                    &QueryMsg::ReverseSimulation {
+                        ask_asset: Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: mstr_token_contract.clone(),
+                            },
+                            amount: Uint128::from(500_000_000_000_000_000u128), // Decimal 18
+                        },
+                    },
+                )
+                .unwrap();
+
+            // Assert Reverse Simulation
+            assert_eq!(
+                response,
+                ReverseSimulationResponse {
+                    offer_amount: Uint128::from(51963u128),
+                    spread_amount: Uint128::from(0u128),
+                    commission_amount: Uint128::from(15_463_917_525_773_195u128), // Decimal 18
+                }
+            );
+
             // Swap MSTR to AURA
             let msg = RouterExecuteMsg::ExecuteSwapOperations {
                 operations: vec![SwapOperation::HaloSwap {
@@ -1252,7 +1307,7 @@ mod tests {
             // Execute send
             let response = app.execute_contract(
                 Addr::unchecked(USER_1.to_string()),
-                Addr::unchecked(mstr_token_contract),
+                Addr::unchecked(mstr_token_contract.clone()),
                 &send_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
@@ -1261,6 +1316,68 @@ mod tests {
             );
 
             assert!(response.is_ok());
+
+            // Update commission rate to 0.05
+            let msg = FactoryExecuteMsg::UpdateCommissionRate {
+                contract: "contract5".to_string(),
+                commission_rate: Decimal256::from_str("0.05").unwrap(),
+            };
+
+            // Execute update commission rate
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Pair
+            let response: PairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    factory_contract,
+                    &FactoryQueryMsg::Pair {
+                        asset_infos: [
+                            AssetInfo::Token {
+                                contract_addr: mstr_token_contract.clone(),
+                            },
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert Pair
+            assert_eq!(
+                response,
+                PairInfo {
+                    liquidity_token: "contract6".to_string(),
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: mstr_token_contract,
+                        },
+                        AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM.to_string(),
+                        },
+                    ],
+                    contract_addr: "contract5".to_string(), // Pair Contract
+                    asset_decimals: [18u8, 6u8],
+                    requirements: CreatePairRequirements {
+                        whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                        first_asset_minimum: Uint128::zero(),
+                        second_asset_minimum: Uint128::zero(),
+                    },
+                    // Verify the default rate is 5%
+                    commission_rate: Decimal256::from_str("0.05").unwrap(),
+                }
+            );
         }
 
         // Mint 340_282_366_921 + 2 MSTR tokens to USER_1
