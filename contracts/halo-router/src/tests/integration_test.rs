@@ -1279,7 +1279,7 @@ mod tests {
             assert_eq!(
                 response,
                 ReverseSimulationResponse {
-                    offer_amount: Uint128::from(5_1138_028_755_970_523_361u128), // Decimal: 18
+                    offer_amount: Uint128::from(51_138_028_755_970_523_361u128), // Decimal: 18
                     spread_amount: Uint128::from(483u128),
                     commission_amount: Uint128::from(154_639u128),
                 }
