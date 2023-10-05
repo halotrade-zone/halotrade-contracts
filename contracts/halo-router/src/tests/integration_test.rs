@@ -1409,11 +1409,7 @@ mod tests {
                 .unwrap();
 
             // Assert Router
-            assert_eq!(
-                response,
-                Decimal256::from_str("0.02").unwrap()
-            );
-
+            assert_eq!(response, Decimal256::from_str("0.02").unwrap());
         }
 
         // Mint 340_282_366_921 + 2 MSTR tokens to USER_1
