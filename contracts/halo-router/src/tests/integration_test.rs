@@ -38,8 +38,6 @@ mod tests {
             router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
         };
 
-        use crate::state::PlatformInfo;
-
         use super::*;
         // This module to verify Native Token works with cw20-token
         // USER_1 Mint 1000 tokens to HALO Token
@@ -1268,10 +1266,10 @@ mod tests {
                     "contract5".to_string(),
                     &QueryMsg::ReverseSimulation {
                         ask_asset: Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: mstr_token_contract.clone(),
+                            info: AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM.to_string(),
                             },
-                            amount: Uint128::from(500_000_000_000_000_000u128), // Decimal 18
+                            amount: Uint128::from(5_000_000u128),
                         },
                     },
                 )
@@ -1281,9 +1279,9 @@ mod tests {
             assert_eq!(
                 response,
                 ReverseSimulationResponse {
-                    offer_amount: Uint128::from(51963u128),
-                    spread_amount: Uint128::from(0u128),
-                    commission_amount: Uint128::from(15_463_917_525_773_195u128), // Decimal 18
+                    offer_amount: Uint128::from(5_1138_028_755_970_523_361u128), // Decimal: 18
+                    spread_amount: Uint128::from(483u128),
+                    commission_amount: Uint128::from(154_639u128),
                 }
             );
 
