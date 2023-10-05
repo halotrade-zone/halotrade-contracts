@@ -15,6 +15,7 @@ mod tests {
         ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
     };
     use haloswap::pair::Cw20HookMsg;
+    use haloswap::router::QueryMsg as RouterQueryMsg;
     // Mock information for CW20 token contract
     const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
     // Mock information for native token
@@ -36,6 +37,8 @@ mod tests {
             },
             router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
         };
+
+        use crate::state::PlatformInfo;
 
         use super::*;
         // This module to verify Native Token works with cw20-token
@@ -1007,7 +1010,8 @@ mod tests {
         // Create Pair: MSTR - NATIVE_DENOM Token
         // USER_1 Add Liquidity: 49_867_841_058 AURA - 494_676_638_256_289_699_505_510 MSTR Token
         // USER_1 Swap: 0.49 MSTR -> AURA Token
-        // Update commission rate to 0.05
+        // Update commission rate to 5%
+        // Update pool fee rate to 2%
         #[test]
         fn test_swap_cw20_decimal_18_with_native_decimal_6() {
             // get integration test app and contracts
@@ -1299,7 +1303,7 @@ mod tests {
 
             // Send 0.49 MSTR to Router Contract
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
-                contract: router_contract,
+                contract: router_contract.clone(),
                 amount: Uint128::from(480000000000000000u128),
                 msg: to_binary(&msg).unwrap(),
             };
@@ -1378,6 +1382,38 @@ mod tests {
                     commission_rate: Decimal256::from_str("0.05").unwrap(),
                 }
             );
+
+            // Update Platform Fee in router contract
+            let msg = RouterExecuteMsg::UpdatePlatformFee {
+                fee: Decimal256::from_str("0.02").unwrap(),
+                manager: ADMIN.to_string(),
+            };
+
+            // Execute update platform fee
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(router_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(1u128),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query Router
+            let response: Decimal256 = app
+                .wrap()
+                .query_wasm_smart(router_contract, &RouterQueryMsg::PlatformFee {})
+                .unwrap();
+
+            // Assert Router
+            assert_eq!(
+                response,
+                Decimal256::from_str("0.02").unwrap()
+            );
+
         }
 
         // Mint 340_282_366_921 + 2 MSTR tokens to USER_1

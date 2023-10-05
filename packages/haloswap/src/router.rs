@@ -89,7 +89,7 @@ pub enum QueryMsg {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
-    #[returns(u64)]
+    #[returns(Decimal256)]
     PlatformFee {},
 }
 
