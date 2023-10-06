@@ -1,3 +1,4 @@
+use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
@@ -59,7 +60,7 @@ pub enum ExecuteMsg {
     },
     // Update platform fee
     UpdatePlatformFee {
-        fee: u64,
+        fee: Decimal256,
         manager: String,
     },
 }
@@ -88,7 +89,7 @@ pub enum QueryMsg {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
-    #[returns(u64)]
+    #[returns(Decimal256)]
     PlatformFee {},
 }
 

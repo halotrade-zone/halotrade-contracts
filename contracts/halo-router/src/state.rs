@@ -1,3 +1,4 @@
+use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
 
 use cosmwasm_std::{Addr, CanonicalAddr};
@@ -10,7 +11,7 @@ pub struct Config {
 
 #[cw_serde]
 pub struct PlatformInfo {
-    pub fee: u64,
+    pub fee: Decimal256,
     pub manager: Addr,
 }
 

@@ -301,6 +301,22 @@ pub struct PairInfo {
     pub commission_rate: Decimal256,
 }
 
+impl PairInfo {
+    pub fn to_raw(&self, api: &dyn Api) -> StdResult<PairInfoRaw> {
+        Ok(PairInfoRaw {
+            asset_infos: [
+                self.asset_infos[0].to_raw(api)?,
+                self.asset_infos[1].to_raw(api)?,
+            ],
+            contract_addr: api.addr_canonicalize(self.contract_addr.as_str())?,
+            liquidity_token: api.addr_canonicalize(self.liquidity_token.as_str())?,
+            asset_decimals: self.asset_decimals,
+            requirements: self.requirements.clone(),
+            commission_rate: self.commission_rate,
+        })
+    }
+}
+
 #[cw_serde]
 pub struct PairInfoRaw {
     pub asset_infos: [AssetInfoRaw; 2],
