@@ -3,7 +3,8 @@ use std::str::FromStr;
 use bignumber::Decimal256;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    coin, from_binary, to_binary, Addr, Coin, CosmosMsg, StdError, SubMsg, Uint128, WasmMsg,
+    coin, coins, from_binary, to_binary, Addr, BankMsg, Coin, CosmosMsg, StdError, SubMsg, Uint128,
+    WasmMsg,
 };
 
 use crate::assert::assert_operations;
@@ -105,6 +106,12 @@ fn execute_swap_operations() {
     assert_eq!(
         res.messages,
         vec![
+            SubMsg::new({
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: "addr0000".to_string(),
+                    amount: coins(0u128, "ukrw".to_string()),
+                })
+            }),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: MOCK_CONTRACT_ADDR.to_string(),
                 funds: vec![],
@@ -210,6 +217,12 @@ fn execute_swap_operations() {
     assert_eq!(
         res.messages,
         vec![
+            SubMsg::new({
+                CosmosMsg::Bank(BankMsg::Send {
+                    to_address: "addr0000".to_string(),
+                    amount: coins(0u128, "ukrw".to_string()),
+                })
+            }),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: MOCK_CONTRACT_ADDR.to_string(),
                 funds: vec![],
@@ -540,7 +553,7 @@ fn query_buy_with_routes() {
     assert_eq!(
         res,
         SimulateSwapOperationsResponse {
-            amount: Uint128::from(1000000u128)
+            amount: Uint128::from(990000u128)
         }
     );
 }
@@ -642,7 +655,7 @@ fn query_reverse_routes_with_from_native() {
     assert_eq!(
         res,
         SimulateSwapOperationsResponse {
-            amount: Uint128::from(1000000u128),
+            amount: Uint128::from(1010000u128),
         }
     );
 
@@ -679,7 +692,11 @@ fn query_reverse_routes_with_from_native() {
                     info: AssetInfo::NativeToken {
                         denom: "ukrw".to_string(),
                     },
-                    amount: offer_amount,
+                    amount: offer_amount
+                        .checked_div(Uint128::from(101u128))
+                        .unwrap()
+                        .checked_mul(Uint128::from(100u128))
+                        .unwrap(),
                 },
                 belief_price: None,
                 max_spread: None,
@@ -784,7 +801,11 @@ fn query_reverse_routes_with_to_native() {
     assert_eq!(
         res,
         SimulateSwapOperationsResponse {
-            amount: Uint128::from(target_amount),
+            amount: Uint128::from(
+                target_amount
+                    .checked_add(target_amount.checked_div(100).unwrap())
+                    .unwrap()
+            ),
         }
     );
 
@@ -810,24 +831,41 @@ fn query_reverse_routes_with_to_native() {
     let info = mock_info("addr0", &[]);
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
+    let platform_fee = offer_amount.checked_div(Uint128::from(100u128)).unwrap();
+
     assert_eq!(
         res.messages,
-        vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: MOCK_CONTRACT_ADDR.to_string(),
-            funds: vec![],
-            msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
-                operation: SwapOperation::HaloSwap {
-                    offer_asset_info: AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
+        vec![
+            SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: "asset0000".to_string(),
+                msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                    recipient: "addr0000".to_string(),
+                    amount: platform_fee
+                        .checked_div(Uint128::from(101u128))
+                        .unwrap()
+                        .checked_mul(Uint128::from(100u128))
+                        .unwrap(),
+                })
+                .unwrap(),
+                funds: vec![],
+            })),
+            SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: MOCK_CONTRACT_ADDR.to_string(),
+                funds: vec![],
+                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
+                    operation: SwapOperation::HaloSwap {
+                        offer_asset_info: AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        ask_asset_info: AssetInfo::NativeToken {
+                            denom: "ukrw".to_string(),
+                        },
                     },
-                    ask_asset_info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                },
-                to: Some("addr0".to_string()),
-            })
-            .unwrap(),
-        })),],
+                    to: Some("addr0".to_string()),
+                })
+                .unwrap(),
+            })),
+        ],
     );
 
     let msg = ExecuteMsg::ExecuteSwapOperation {

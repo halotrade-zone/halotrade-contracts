@@ -130,6 +130,21 @@ pub fn execute(
             denom,
             asset_decimals,
         } => update_native_token_decimals(deps, env, info, denom, asset_decimals),
+        ExecuteMsg::UpdateCommissionRate { commission_rate } => {
+            let config: Config = CONFIG.load(deps.storage)?;
+
+            // permission check
+            if info.sender.as_str() != config.halo_factory {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            COMMISSION_RATE_INFO.save(deps.storage, &commission_rate)?;
+
+            Ok(Response::new().add_attributes(vec![
+                ("action", "update_commission_rate"),
+                ("commission_rate", &commission_rate.to_string()),
+            ]))
+        }
     }
 }
 

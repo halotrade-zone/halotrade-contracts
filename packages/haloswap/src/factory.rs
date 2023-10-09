@@ -37,6 +37,12 @@ pub enum ExecuteMsg {
         contract: String,
         code_id: Option<u64>,
     },
+    /// Update commission rate
+    /// Only owner can execute
+    UpdateCommissionRate {
+        contract: String,
+        commission_rate: Decimal256,
+    },
 }
 
 #[cw_serde]
