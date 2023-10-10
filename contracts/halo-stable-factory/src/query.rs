@@ -1,6 +1,8 @@
 use cosmwasm_std::{QuerierWrapper, Addr, WasmQuery, StdResult, QueryRequest, to_binary};
 use halo_stable_pool::state::StablePoolInfo;
 use halo_stable_pool::msg::QueryMsg as StablePoolQueryMsg;
+use crate::msg::QueryMsg as StableFactoryQueryMsg;
+use haloswap::asset::AssetInfo;
 
 pub fn query_stable_pool_info_from_stable_pools(
     querier: &QuerierWrapper,
@@ -12,4 +14,17 @@ pub fn query_stable_pool_info_from_stable_pools(
     }))?;
 
     Ok(stable_pool_info)
+}
+
+pub fn query_stable_pool_info(
+    querier: &QuerierWrapper,
+    stable_factory_contract: Addr,
+    asset_infos: &Vec<AssetInfo>,
+) -> StdResult<StablePoolInfo> {
+    querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: stable_factory_contract.to_string(),
+        msg: to_binary(&StableFactoryQueryMsg::StablePool {
+            asset_infos: asset_infos.clone(),
+        })?,
+    }))
 }

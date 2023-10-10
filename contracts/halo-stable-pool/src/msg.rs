@@ -2,7 +2,7 @@ use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Uint128, Addr};
 use cw20::Cw20ReceiveMsg;
-use haloswap::asset::{LPTokenInfo, AssetInfo, Asset};
+use haloswap::{asset::{LPTokenInfo, AssetInfo, Asset}, pair::SimulationResponse};
 
 use crate::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
 
@@ -52,4 +52,11 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(StablePoolInfo)]
     StablePool {},
+    #[returns(SimulationResponse)]
+    StableSimulation {
+        offer_asset: Asset,
+        ask_asset: AssetInfo,
+    },
 }
+
+

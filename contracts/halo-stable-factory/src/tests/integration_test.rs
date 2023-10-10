@@ -1362,7 +1362,6 @@ mod tests {
                     - 200_000_000u128 * DECIMAL_6
                     + 10_000_403_317_233u128), // 10_000_000 BUSD received from the stable pool
             );
-
         }
     }
 }

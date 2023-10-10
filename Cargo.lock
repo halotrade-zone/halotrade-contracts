@@ -580,6 +580,8 @@ dependencies = [
  "getrandom",
  "halo-factory",
  "halo-pair",
+ "halo-stable-factory",
+ "halo-stable-pool",
  "haloswap",
  "schemars",
  "serde",

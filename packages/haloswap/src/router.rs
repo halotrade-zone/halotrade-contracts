@@ -16,18 +16,27 @@ pub enum SwapOperation {
         offer_asset_info: AssetInfo,
         ask_asset_info: AssetInfo,
     },
+    StableSwap {
+        offer_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
+        asset_infos: Vec<AssetInfo>,
+    },
 }
 
 impl SwapOperation {
     pub fn get_target_asset_info(&self) -> AssetInfo {
         match self {
             SwapOperation::HaloSwap { ask_asset_info, .. } => ask_asset_info.clone(),
+            SwapOperation::StableSwap { ask_asset_info, .. } => ask_asset_info.clone(),
         }
     }
 
     pub fn get_offer_asset_info(&self) -> AssetInfo {
         match self {
             SwapOperation::HaloSwap {
+                offer_asset_info, ..
+            } => offer_asset_info.clone(),
+            SwapOperation::StableSwap {
                 offer_asset_info, ..
             } => offer_asset_info.clone(),
         }

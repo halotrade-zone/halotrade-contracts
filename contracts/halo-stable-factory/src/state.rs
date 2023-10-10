@@ -26,7 +26,7 @@ pub const STABLE_POOLS: Map<&[u8], StablePoolInfoRaw> = Map::new("stable_pool_in
 
 
 pub fn pair_key(asset_infos: &Vec<AssetInfoRaw>) -> Vec<u8> {
-    let mut asset_infos = asset_infos.to_vec();
+    let asset_infos = asset_infos.to_vec();
     // Initialize return value
     let mut key: Vec<u8> = Vec::new();
     // Loop through all Vec<AssetInfoRaw> and append each AssetInfoRaw's bytes to the key

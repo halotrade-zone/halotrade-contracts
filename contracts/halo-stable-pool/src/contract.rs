@@ -10,9 +10,10 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
-use haloswap::{token::InstantiateMsg as TokenInstantiateMsg, asset::{AssetInfoRaw, Asset, LP_TOKEN_RESERVED_AMOUNT, AssetInfo}, error::ContractError, querier::{query_token_info, query_token_balance}};
+use halo_factory::contract;
+use haloswap::{token::InstantiateMsg as TokenInstantiateMsg, asset::{AssetInfoRaw, Asset, LP_TOKEN_RESERVED_AMOUNT, AssetInfo}, error::ContractError, querier::{query_token_info, query_token_balance}, pair::SimulationResponse};
 
-use crate::{msg::{InstantiateMsg, ExecuteMsg, QueryMsg}, state::{StablePoolInfoRaw, CONFIG, Config, STABLE_POOL_INFO, COMMISSION_RATE_INFO, AMP_FACTOR_INFO}, assert::assert_stable_slippage_tolerance, math::AmpFactor};
+use crate::{msg::{InstantiateMsg, ExecuteMsg, QueryMsg}, state::{StablePoolInfoRaw, CONFIG, Config, STABLE_POOL_INFO, COMMISSION_RATE_INFO, AMP_FACTOR_INFO, StablePoolInfo}, assert::assert_stable_slippage_tolerance, math::AmpFactor};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:halo-stable-pool";
@@ -528,12 +529,77 @@ pub fn stable_swap(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::StablePool {} => Ok(to_binary(&query_stable_pool_info(deps)?)?),
+        QueryMsg::StablePool {} => Ok(to_binary(&query_stable_pool(deps)?)?),
+        QueryMsg::StableSimulation { offer_asset, ask_asset } => Ok(to_binary(&query_stable_simulation(
+            deps,
+            offer_asset,
+            ask_asset,
+        )?)?),
     }
 }
 
 /// Query stable pool info
-pub fn query_stable_pool_info(deps: Deps) -> StdResult<StablePoolInfoRaw> {
+pub fn query_stable_pool(deps: Deps) -> StdResult<StablePoolInfoRaw> {
     let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
     Ok(stable_pool_info)
+}
+
+pub fn query_stable_simulation(
+    deps: Deps,
+    offer_asset: Asset,
+    ask_asset: AssetInfo,
+) -> Result<SimulationResponse, ContractError> {
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+
+    let contract_addr = deps.api.addr_validate(&stable_pool_info.contract_addr.to_string())?;
+    // get pool info of the stable pool contract
+    let pools: Vec<Asset> = stable_pool_info.query_pools(&deps.querier, deps.api, contract_addr.clone())?;
+    // Commission rate OR Fee amount for framework
+    let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
+    // Get AMP factor info
+    let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
+
+    // Get offer asset index
+    let offer_asset_index = pools
+        .iter()
+        .position(|pool| pool.info == offer_asset.info)
+        .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
+
+    // Get offer asset amount
+    let offer_asset_amount = offer_asset.amount;
+
+    // Get ask asset index
+    let ask_asset_index = pools
+        .iter()
+        .position(|pool| pool.info == ask_asset)
+        .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
+
+    // Get the amount of assets in the stable pool
+    let old_c_amounts: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| pool.amount)
+        .collect::<Vec<Uint128>>();
+
+    // Calculate the amount of assets that user will receive
+    let return_amount: Uint128 = amp_factor_info.swap_to(
+        offer_asset_index,
+        offer_asset_amount,
+        ask_asset_index,
+        &old_c_amounts,
+        commission_rate,
+    ).unwrap();
+
+    let return_asset = Asset {
+        info: pools[ask_asset_index].info.clone(),
+        amount: return_amount,
+    };
+
+    Ok(SimulationResponse {
+        return_amount: return_asset.amount,
+        spread_amount: Uint128::zero(),
+        commission_amount: Uint128::zero(),
+    })
+
+
+
 }

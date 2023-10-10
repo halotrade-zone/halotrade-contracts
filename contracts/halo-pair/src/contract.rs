@@ -600,7 +600,7 @@ pub fn query_simulation(
     // get pool info of the pair contract
     let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
     // Commission rate OR Fee amount for framework
-    let commission_rate = COMMISSION_RATE_INFO.load(deps.storage)?;
+    let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;
