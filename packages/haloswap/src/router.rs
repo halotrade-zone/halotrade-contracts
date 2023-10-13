@@ -8,6 +8,7 @@ use crate::asset::AssetInfo;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub halo_factory: String,
+    pub halo_stable_factory: String,
 }
 
 #[cw_serde]

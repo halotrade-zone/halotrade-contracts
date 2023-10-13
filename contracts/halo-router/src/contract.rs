@@ -15,7 +15,7 @@ use halo_stable_pool::state::StablePoolInfo;
 
 use crate::assert::{assert_minium_receive, assert_operations};
 use crate::operations::execute_swap_operation;
-use crate::state::{Config, PlatformInfo, CONFIG, PLATFORM_INFO};
+use crate::state::{Config, PlatformInfo, CONFIG, PLATFORM_INFO, STABLE_FACTORY_CONFIG, StableFactoryConfig};
 
 use cw20::Cw20ReceiveMsg;
 use haloswap::asset::{Asset, AssetInfo, PairInfo};
@@ -45,6 +45,13 @@ pub fn instantiate(
         deps.storage,
         &Config {
             halo_factory: deps.api.addr_canonicalize(&msg.halo_factory)?,
+        },
+    )?;
+
+    STABLE_FACTORY_CONFIG.save(
+        deps.storage,
+        &StableFactoryConfig {
+            halo_stable_factory: deps.api.addr_canonicalize(&msg.halo_stable_factory)?,
         },
     )?;
 

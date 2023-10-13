@@ -24,8 +24,11 @@ mod tests {
         use cw20::{Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg};
         use cw_multi_test::Executor;
         use halo_stable_pool::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
-        use haloswap::asset::{AssetInfo, LPTokenInfo, Asset};
-        use crate::msg::{ExecuteMsg as FactoryExecuteMsg, QueryMsg as FactoryQueryMsg};
+        use haloswap::asset::{AssetInfo, LPTokenInfo, Asset, CreatePairRequirements};
+        use haloswap::factory::{
+            ExecuteMsg as HaloFactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as HaloFactoryQueryMsg,
+        };
+        use crate::msg::{ExecuteMsg as StableFactoryExecuteMsg, QueryMsg as StableFactoryQueryMsg};
         use halo_stable_pool::msg::{ExecuteMsg as StablePoolExecuteMsg, QueryMsg as StablePoolQueryMsg};
 
         use super::*;
@@ -123,7 +126,7 @@ mod tests {
             ];
 
             // create stable pool msg
-            let create_stable_pool_msg = FactoryExecuteMsg::CreateStablePool {
+            let create_stable_pool_msg = StableFactoryExecuteMsg::CreateStablePool {
                 asset_infos,
                 requirements: CreateStablePoolRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
@@ -162,7 +165,7 @@ mod tests {
                 .wrap()
                 .query_wasm_smart(
                     Addr::unchecked(stable_factory_contract.clone()),
-                    &FactoryQueryMsg::StablePool {
+                    &StableFactoryQueryMsg::StablePool {
                         asset_infos: vec![
                             AssetInfo::Token {
                                 contract_addr: usdc_token_contract.clone(),
@@ -715,7 +718,7 @@ mod tests {
             ];
 
             // create stable pool msg
-            let create_stable_pool_msg = FactoryExecuteMsg::CreateStablePool {
+            let create_stable_pool_msg = StableFactoryExecuteMsg::CreateStablePool {
                 asset_infos,
                 requirements: CreateStablePoolRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
@@ -754,7 +757,7 @@ mod tests {
                 .wrap()
                 .query_wasm_smart(
                     Addr::unchecked(stable_factory_contract.clone()),
-                    &FactoryQueryMsg::StablePool {
+                    &StableFactoryQueryMsg::StablePool {
                         asset_infos: vec![
                             AssetInfo::Token {
                                 contract_addr: usdc_token_contract.clone(),
@@ -1362,6 +1365,374 @@ mod tests {
                     - 200_000_000u128 * DECIMAL_6
                     + 10_000_403_317_233u128), // 10_000_000 BUSD received from the stable pool
             );
+        }
+
+        // Create a stable pool with 3 tokens USDC, USDT, BUSD
+        // Provide liquidity to the stable pool (10000 USDC, 20000 USDT, 30000 BUSD)
+        // Create a pool NATIVE, USDC
+        // Provide liquidity to the pool (10000 NATIVE, 5000 USDC)
+        // ADMIN swap 100 NATIVE to USDT
+        // -> ADMIN should get 50 USDT
+        #[test]
+        fn test_swap_with_rounter() {
+            // get integration test app and contracts
+            let (mut app, contracts) = instantiate_contracts();
+            // get the stable factory contract
+            let stable_factory_contract = &contracts[0].contract_addr.clone();
+            // get the USDC contract
+            let usdc_token_contract = &contracts[2].contract_addr.clone();
+            // get the USDT contract
+            let usdt_token_contract = &contracts[3].contract_addr.clone();
+            // get the BUSD contract
+            let busd_token_contract = &contracts[4].contract_addr.clone();
+            // get current block time
+            let current_block_time = app.block_info().time.seconds();
+            // mint 1_000_000_000 USDC token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_USDC.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdc_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // mint 1_000_000_000 USDT token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_USDT.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdt_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // mint 1_000_000_000 BUSD token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_BUSD.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(busd_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // create stable pool USDC, USDT, BUSD
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: usdc_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: usdt_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: busd_token_contract.clone(),
+                },
+            ];
+
+            // create stable pool msg
+            let create_stable_pool_msg = StableFactoryExecuteMsg::CreateStablePool {
+                asset_infos,
+                requirements: CreateStablePoolRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                },
+                commission_rate: None,
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pool
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pool_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // query stable pool info
+            let response: StablePoolInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::StablePool {
+                        asset_infos: vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert stable pool info
+            assert_eq!(
+                response,
+                StablePoolInfo {
+                    contract_addr: "contract5".to_string(),
+                    liquidity_token: "contract6".to_string(),
+                    asset_infos: vec![
+                        AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                    ],
+                    asset_decimals: vec![18, 18, 18],
+                    requirements: CreateStablePoolRequirements {
+                        whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                        asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                    },
+                    commission_rate: Decimal256::from_str("0.003").unwrap(),
+                }
+            );
+
+            // increase allowance for stable pool contract
+            let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+                spender: response.contract_addr.clone(),
+                amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
+                expires: None,
+            };
+
+            // Execute increase allowance for USDC
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdc_token_contract.clone()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Execute increase allowance for USDT
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdt_token_contract.clone()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Execute increase allowance for BUSD
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(busd_token_contract.clone()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // provide liquidity to the pool
+            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(1u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(1u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(1u128 * DECIMAL_6),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
+
+            // Execute provide liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query LP Balance of ADMIN
+            let response: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // Assert LP Balance of ADMIN
+            assert_eq!(
+                response,
+                BalanceResponse {
+                    balance: Uint128::from(2_999_999u128),
+                }
+            );
+
+            // provide liquidity to the pool one more time
+            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(10_000u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(20_000u128 * DECIMAL_6),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(30_000u128 * DECIMAL_6),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
+
+            // Execute provide liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Add Native Token Decimals
+            let msg = HaloFactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM_2.to_string(),
+                decimals: 6u8,
+            };
+
+            // Execute add native token decimals
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(factory_contract.clone()),
+                &msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // create pool NATIVE, USDC
+
+            let asset_infos = [
+                AssetInfo::NativeToken {
+                    denom: NATIVE_DENOM_2.to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: usdc_token_contract.clone(),
+                },
+            ];
+
+            // create pool msg
+            let create_pool_msg = HaloFactoryExecuteMsg::CreatePair {
+                asset_infos,
+                requirements: CreatePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    first_asset_minimum: Uint128::zero(),
+                    second_asset_minimum: Uint128::zero(),
+                },
+                commission_rate: Some(Decimal256::from_str("0.03").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "aura-USDC".to_string(),
+                    lp_token_symbol: "aura-USDC".to_string(),
+                    lp_token_decimals: None,
+                },
+            };
+
+            // Execute create pool
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract1".to_string()),
+                &create_pool_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+
         }
     }
 }

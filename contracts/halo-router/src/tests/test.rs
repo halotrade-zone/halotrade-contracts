@@ -26,6 +26,7 @@ fn proper_initialization() {
 
     let msg = InstantiateMsg {
         halo_factory: "halofactory".to_string(),
+        halo_stable_factory: "halofactory".to_string(), // Dummy value, not used in this test
     };
 
     let info = mock_info("addr0000", &[]);
@@ -49,6 +50,7 @@ fn execute_swap_operations() {
 
     let msg = InstantiateMsg {
         halo_factory: "halofactory".to_string(),
+        halo_stable_factory: "halofactory".to_string(), // Dummy value, not used in this test
     };
 
     let info = mock_info("addr0000", &[]);
@@ -280,6 +282,7 @@ fn execute_swap_operation() {
     let mut deps = mock_dependencies(&[]);
     let msg = InstantiateMsg {
         halo_factory: "halofactory".to_string(),
+        halo_stable_factory: "halofactory".to_string(), // Dummy value, not used in this test
     };
 
     let info = mock_info("addr0000", &[]);
@@ -469,6 +472,7 @@ fn query_buy_with_routes() {
 
     let msg = InstantiateMsg {
         halo_factory: "halofactory".to_string(),
+        halo_stable_factory: "halofactory".to_string(), // Dummy value, not used in this test
     };
 
     let info = mock_info("addr0000", &[]);
@@ -564,6 +568,7 @@ fn query_reverse_routes_with_from_native() {
 
     let msg = InstantiateMsg {
         halo_factory: "halofactory".to_string(),
+        halo_stable_factory: "halofactory".to_string(), // Dummy value, not used in this test
     };
 
     let target_amount = 1000000u128;
@@ -713,6 +718,7 @@ fn query_reverse_routes_with_to_native() {
 
     let msg = InstantiateMsg {
         halo_factory: "halofactory".to_string(),
+        halo_stable_factory: "halofactory".to_string(), // Dummy value, not used in this test
     };
 
     let target_amount = 1000000u128;
