@@ -80,7 +80,6 @@ impl AmpFactor{
                 let ann = Uint256::from(amp_factor.checked_mul(n_coins.checked_pow(n_coins)?.into()).unwrap());
                 let leverage = (Decimal256::from_uint256(sum_x)) * Decimal256::from_uint256(ann);
                 // d = (ann * sum_x + d_prod * n_coins) * d_prev / ((ann - 1) * d_prev + (n_coins + 1) * d_prod)
-                println!("ann: {}, sum_x: {}, d_prod: {}, n_coins: {}, d_prev: {}, leverage: {}", ann, sum_x, d_prod, n_coins, d_prev, leverage);
                 let numerator = d_prev * (d_prod * Decimal256::from_uint256(Uint256::from(Uint128::from(n_coins))) + leverage);
                 let denominator = d_prev * (Decimal256::from_uint256(ann) - Decimal256::one()) + (d_prod * (Decimal256::from_uint256(Uint256::from(Uint128::from(n_coins))) + Decimal256::one())).into();
                 d = numerator / denominator;
@@ -110,7 +109,6 @@ impl AmpFactor{
 
         if pool_token_supply.is_zero() {
             let invariant = self.compute_d(deposit_c_amounts)? * Uint256::one();
-            println!("invariant: {}", invariant);
             return Some((invariant.into(), Uint128::zero()));
         } else {
             let n_coins = old_c_amounts.len();

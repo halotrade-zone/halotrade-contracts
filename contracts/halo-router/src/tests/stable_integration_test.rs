@@ -37,7 +37,7 @@ mod tests {
 
     mod execute_interacting_with_stable_swap {
         use std::str::FromStr;
-        use cosmwasm_std::Querier;
+        use cosmwasm_std::{Querier, WasmQuery};
         use cw_multi_test::Executor;
         use halo_stable_pool::{math::AmpFactor, state::{CreateStablePoolRequirements, StablePoolInfo}};
         use haloswap::{
@@ -475,14 +475,14 @@ mod tests {
                 }
             );
 
-            // increase allowance for pool contract
+            // increase allowance for pool contract for classic pool
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: create_classic_pool_response.contract_addr.clone(),
                 amount: Uint128::from(10_000u128 * DECIMAL_6),
                 expires: None,
             };
 
-            // Execute increase allowance for USDC
+            // Execute increase allowance for USDC for classic pool
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked(usdc_token_contract.clone()),
@@ -524,6 +524,38 @@ mod tests {
             );
 
             assert!(response.is_ok());
+
+            // query balance of ADMIN in USDT before swap
+            let req: QueryRequest<Cw20QueryMsg> = QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: usdt_token_contract.clone(),
+                msg: to_binary(&Cw20QueryMsg::Balance {
+                    address: ADMIN.to_string(),
+                })
+                .unwrap(),
+            });
+
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let usdt_balance_before_swap: BalanceResponse = from_binary(&res).unwrap();
+
+            // Assert balance of ADMIN in USDT before swap
+            assert_eq!(
+                usdt_balance_before_swap.balance,
+                Uint128::from(999_999_999_999_999_979_999_000_000u128),
+            );
+
+            // query balance of ADMIN in NATIVE_DENOM_2 before swap
+            let req: QueryRequest<BankQuery> = QueryRequest::Bank(BankQuery::Balance {
+                address: ADMIN.to_string(),
+                denom: NATIVE_DENOM_2.to_string(),
+            });
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let denom_2_balance_before_swap: BankBalanceResponse = from_binary(&res).unwrap();
+
+            // Assert balance of ADMIN in NATIVE_DENOM_2 before swap
+            assert_eq!(
+                denom_2_balance_before_swap.amount.amount,
+                Uint128::from(494999960000u128), //494999960000
+            );
 
             // Swap 100 NATIVE to USDT via router with operation HaloSwap(AURA -> USDC) and HaloSwap(USDC -> USDT)
             let swap_msg = RouterExecuteMsg::ExecuteSwapOperations {
@@ -568,8 +600,42 @@ mod tests {
                 }],
             );
 
-            println!("response: {:?}", response);
             assert!(response.is_ok());
+
+            // query balance of ADMIN in NATIVE_DENOM_2 after swap
+            let req: QueryRequest<BankQuery> = QueryRequest::Bank(BankQuery::Balance {
+                address: ADMIN.to_string(),
+                denom: NATIVE_DENOM_2.to_string(),
+            });
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let balance: BankBalanceResponse = from_binary(&res).unwrap();
+
+            // Assert balance of ADMIN in NATIVE_DENOM_2 after swap
+            assert_eq!(
+                balance.amount.amount,
+                denom_2_balance_before_swap.amount.amount
+                - Uint128::from(100u128 * DECIMAL_6)
+                + Uint128::from(1u128 * DECIMAL_6), // platform fee back to ADMIN
+            );
+
+            // query balance of ADMIN in USDT after swap
+            let req: QueryRequest<Cw20QueryMsg> = QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: usdt_token_contract.clone(),
+                msg: to_binary(&Cw20QueryMsg::Balance {
+                    address: ADMIN.to_string(),
+                })
+                .unwrap(),
+            });
+
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let usdt_balance_after_swap: BalanceResponse = from_binary(&res).unwrap();
+
+            // Assert balance of ADMIN in USDT after swap
+            assert_eq!(
+                usdt_balance_after_swap.balance,
+                usdt_balance_before_swap.balance
+                + Uint128::from(94172249u128),
+            );
 
         }
     }

@@ -25,14 +25,11 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    Receive(Cw20ReceiveMsg),
     ProvideLiquidity {
         assets: Vec<Asset>,
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
-    },
-    RemoveLiquidityByShare {
-        share: Uint128,
-        assets_min_amount: Option<Vec<Uint128>>,
     },
     RemoveLiquidityByToken {
         assets: Vec<Asset>,
@@ -48,6 +45,21 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+pub enum Cw20StableHookMsg {
+    StableSwap {
+        offer_asset: Asset,
+        ask_asset: AssetInfo,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<Addr>,
+    },
+    RemoveLiquidityByShare {
+        share: Uint128,
+        assets_min_amount: Option<Vec<Uint128>>,
+    },
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(StablePoolInfo)]
@@ -56,6 +68,18 @@ pub enum QueryMsg {
     StableSimulation {
         offer_asset: Asset,
         ask_asset: AssetInfo,
+    },
+    #[returns(Uint128)]
+    ProvideLiquiditySimulation {
+        assets: Vec<Asset>,
+    },
+    #[returns(Vec<Uint128>)]
+    RemoveLiquidityByShareSimulation {
+        share: Uint128,
+    },
+    #[returns(Uint128)]
+    RemoveLiquidityByTokenSimulation {
+        assets: Vec<Asset>,
     },
 }
 

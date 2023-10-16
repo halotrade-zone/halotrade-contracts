@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, hash::SipHasher};
 
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
@@ -13,7 +13,7 @@ use cw_utils::parse_reply_instantiate_data;
 use halo_factory::contract;
 use haloswap::{token::InstantiateMsg as TokenInstantiateMsg, asset::{AssetInfoRaw, Asset, LP_TOKEN_RESERVED_AMOUNT, AssetInfo}, error::ContractError, querier::{query_token_info, query_token_balance}, pair::SimulationResponse};
 
-use crate::{msg::{InstantiateMsg, ExecuteMsg, QueryMsg}, state::{StablePoolInfoRaw, CONFIG, Config, STABLE_POOL_INFO, COMMISSION_RATE_INFO, AMP_FACTOR_INFO, StablePoolInfo}, assert::assert_stable_slippage_tolerance, math::AmpFactor};
+use crate::{msg::{InstantiateMsg, ExecuteMsg, QueryMsg, Cw20StableHookMsg}, state::{StablePoolInfoRaw, CONFIG, Config, STABLE_POOL_INFO, COMMISSION_RATE_INFO, AMP_FACTOR_INFO, StablePoolInfo}, assert::assert_stable_slippage_tolerance, math::AmpFactor};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:halo-stable-pool";
@@ -109,20 +109,45 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::Receive(cw20_msg) => receive_cw20(deps, env, info, cw20_msg),
         ExecuteMsg::ProvideLiquidity {
             assets,
             slippage_tolerance,
             receiver,
         } => provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
-        ExecuteMsg::RemoveLiquidityByShare { share, assets_min_amount } => {
-            remove_liquidity_by_share(deps, env, info, share, assets_min_amount)
-        }
         ExecuteMsg::RemoveLiquidityByToken { assets, max_burn_share } => {
             remove_liquidity_by_token(deps, env, info, assets, max_burn_share)
         }
         ExecuteMsg::StableSwap { offer_asset, ask_asset, belief_price, max_spread, to } => {
-            stable_swap(deps, env, info, offer_asset, ask_asset, belief_price, max_spread, to)
+            // This message can only be called by the stable pool contract itself when the offer asset is native token
+            if !offer_asset.is_native_token() {
+                return Err(ContractError::Unauthorized {});
+            }
+            stable_swap(deps, env, info.clone(), info.sender, offer_asset, ask_asset, belief_price, max_spread, to)
         }
+    }
+}
+
+pub fn receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    match from_binary(&cw20_msg.msg) {
+        Ok(Cw20StableHookMsg::StableSwap {
+            offer_asset,
+            ask_asset,
+            belief_price,
+            max_spread,
+            to,
+        }) => {
+            stable_swap(deps, env, info, Addr::unchecked(cw20_msg.sender), offer_asset, ask_asset, belief_price, max_spread, to)
+        },
+        Ok(Cw20StableHookMsg::RemoveLiquidityByShare { share, assets_min_amount }) => {
+            remove_liquidity_by_share(deps, env, info, Addr::unchecked(cw20_msg.sender), share, assets_min_amount)
+        },
+        Err(err) => Err(ContractError::Std(err)),
     }
 }
 
@@ -257,6 +282,7 @@ pub fn remove_liquidity_by_share(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    sender: Addr,
     share: Uint128,
     assets_min_amount: Option<Vec<Uint128>>,
 ) -> Result<Response, ContractError> {
@@ -268,8 +294,7 @@ pub fn remove_liquidity_by_share(
     }
     // Get stable pool info
     let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
-    // Get sender's LP token balance
-
+    // Get total supply of the LP token
     let shares_total_supply = query_token_info(&deps.querier, deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?)?.total_supply;
 
     // Get the amount of assets in the stable pool
@@ -304,7 +329,7 @@ pub fn remove_liquidity_by_share(
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                    recipient: info.sender.to_string(),
+                    recipient: sender.to_string(),
                     amount: assets_amount[i],
                 })?,
                 funds: vec![],
@@ -314,17 +339,6 @@ pub fn remove_liquidity_by_share(
 
     // Get the address of the LP token
     let liquidity_token = deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?;
-
-    // Transfer LP token from sender to contract
-    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: liquidity_token.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: info.sender.to_string(),
-            recipient: env.contract.address.to_string(),
-            amount: share,
-        })?,
-        funds: vec![],
-    }));
 
     // Burn LP token from sender
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -447,6 +461,7 @@ pub fn stable_swap(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    sender: Addr,
     offer_asset: Asset,
     ask_asset: AssetInfo,
     belief_price: Option<Decimal>,
@@ -469,20 +484,6 @@ pub fn stable_swap(
     // Get amount of offer asset
     let offer_asset_amount = offer_asset.amount;
     let mut messages: Vec<CosmosMsg> = vec![];
-    // Transfer offer_asset from sender to stable pool contract
-    // If the asset 'offer_asset' is a token, then we need to execute TransferFrom msg to receive funds
-    // If the asset 'offer_asset' is native token, the amount of native token is already sent with the message to the pool.
-    if let AssetInfo::Token { contract_addr, .. } = &offer_asset.info {
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract_addr.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount: offer_asset_amount,
-            })?,
-            funds: vec![],
-        }));
-    }
 
     // Get index of ask asset
     let ask_asset_index = pools
@@ -509,7 +510,7 @@ pub fn stable_swap(
         amount: return_amount,
     };
 
-    let receiver = to.unwrap_or_else(|| info.sender.clone());
+    let receiver = to.unwrap_or_else(|| sender.clone());
 
     // Send the amount of assets that user will receive to the sender
     if !return_amount.is_zero() {
@@ -527,13 +528,28 @@ pub fn stable_swap(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::StablePool {} => Ok(to_binary(&query_stable_pool(deps)?)?),
         QueryMsg::StableSimulation { offer_asset, ask_asset } => Ok(to_binary(&query_stable_simulation(
             deps,
             offer_asset,
             ask_asset,
+        )?)?),
+        QueryMsg::ProvideLiquiditySimulation { assets } => Ok(to_binary(&query_provide_liquidity_simulation(
+            deps,
+            env,
+            assets,
+        )?)?),
+        QueryMsg::RemoveLiquidityByShareSimulation { share } => Ok(to_binary(&query_remove_liquidity_by_share_simulation(
+            deps,
+            env,
+            share,
+        )?)?),
+        QueryMsg::RemoveLiquidityByTokenSimulation { assets } => Ok(to_binary(&query_remove_liquidity_by_token_simulation(
+            deps,
+            env,
+            assets,
         )?)?),
     }
 }
@@ -600,6 +616,106 @@ pub fn query_stable_simulation(
         commission_amount: Uint128::zero(),
     })
 
+}
 
+pub fn query_provide_liquidity_simulation(
+    deps: Deps,
+    env: Env,
+    assets: Vec<Asset>,
+) -> Result<Uint128, ContractError> {
+    // get information of the stable pool
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // get amp factor info
+    let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
+    // query the information of the stable pool of assets
+    let pools: Vec<Asset> =
+        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // get the amount of assets that user deposited after checking the assets is same as the assets in stable pool
+    let deposits: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| {
+            assets
+                .iter()
+                .find(|asset| asset.info == pool.info)
+                .map(|asset| asset.amount)
+                .expect("Wrong asset info is given")
+        })
+        .collect();
 
+    // get current total amount of assets in the stable pool
+    let old_c_amounts: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| pool.amount)
+        .collect::<Vec<Uint128>>();
+
+    // get the address of the LP token
+    let liquidity_token = deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?;
+
+    // get total supply of the LP token
+    let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
+
+    // calculate the amount of LP token is minted to the user
+    let share = amp_factor_info.compute_lp_amount_for_deposit(&deposits, &old_c_amounts, total_share, Uint128::zero()).unwrap().0;
+    // prevent providing free token (one of the deposits is zero)
+    if share.is_zero() {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Share amount is zero",
+        )));
+    }
+
+    Ok(share)
+
+}
+
+pub fn query_remove_liquidity_by_share_simulation(
+    deps: Deps,
+    env: Env,
+    share: Uint128,
+) -> Result<Vec<Uint128>, ContractError> {
+    // Get stable pool info
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get total supply of the LP token
+    let shares_total_supply = query_token_info(&deps.querier, deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?)?.total_supply;
+
+    // Get the amount of assets in the stable pool
+    let pools: Vec<Asset> = stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get the amount of assets that user will receive after removing liquidity
+    let assets_amount: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| {
+            // Return the amount of assets that user will receive
+            Ok(pool.amount.checked_mul(share)?.checked_div(shares_total_supply)?)
+        })
+        .collect::<StdResult<Vec<Uint128>>>()?;
+
+    Ok(assets_amount)
+}
+
+pub fn query_remove_liquidity_by_token_simulation(
+    deps: Deps,
+    env: Env,
+    assets: Vec<Asset>,
+) -> Result<Uint128, ContractError> {
+    // Get stable pool info
+    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get total supply of the LP token
+    let shares_total_supply = query_token_info(&deps.querier, deps.api.addr_validate(&stable_pool_info.liquidity_token.to_string())?)?.total_supply;
+    // Get amp factor info
+    let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
+    // Get the amount of assets in the stable pool
+    let pools: Vec<Asset> = stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get current total amount of assets in the stable pool
+    let old_c_amounts: Vec<Uint128> = pools
+        .iter()
+        .map(|pool| pool.amount)
+        .collect::<Vec<Uint128>>();
+    // Get asset amount from assets
+    let assets_amount: Vec<Uint128> = assets
+        .iter()
+        .map(|asset| asset.amount)
+        .collect::<Vec<Uint128>>();
+    // Get the amount of LP token that user will burn
+    let share = amp_factor_info.compute_lp_amount_for_withdraw(&assets_amount, &old_c_amounts, shares_total_supply, Uint128::zero()).unwrap().0;
+
+    Ok(share)
 }

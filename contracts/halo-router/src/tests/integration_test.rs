@@ -1302,7 +1302,7 @@ mod tests {
             // Send 0.49 MSTR to Router Contract
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: router_contract.clone(),
-                amount: Uint128::from(480000000000000000u128),
+                amount: Uint128::from(490000000000000000u128),
                 msg: to_binary(&msg).unwrap(),
             };
 
