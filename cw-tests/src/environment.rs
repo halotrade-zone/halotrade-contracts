@@ -14,7 +14,7 @@ use haloswap::token::InstantiateMsg as HaloTokenInstantiateMsg;
 use haloswap::factory::InstantiateMsg as HaloFactoryInstantiateMsg;
 use haloswap::router::InstantiateMsg as HaloRouterInstantiateMsg;
 
-pub const USER: &str = "aura1fqj2redmssckrdeekhkcvd2kzp9f4nks4fctrt";
+pub const USER: &str = "aura1fqj2redmssckrdeekhkcvd2kzp9f4nks4fctra";
 pub const ADMIN: &str = "aura1uh24g2lc8hvvkaaf7awz25lrh5fptthu2dhq0n";
 pub const NATIVE_DENOM: &str = "uaura";
 pub const NATIVE_DENOM_2: &str = "utaura";

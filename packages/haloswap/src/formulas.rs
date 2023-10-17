@@ -44,7 +44,7 @@ pub fn calculate_lp_token_amount_to_user(
         // if the total supply of the LP token is zero, Initial share = collateral amount
         // hoanm: EQUATION - LP = \sqrt{A * B}
         Ok(Uint128::from(
-            (deposits[0].u128() * deposits[1].u128()).integer_sqrt(),
+            deposits[0].u128().integer_sqrt() * deposits[1].u128().integer_sqrt(),
         ))
     } else {
         // hoanm: update these equations by using the formula of Uniswap V2

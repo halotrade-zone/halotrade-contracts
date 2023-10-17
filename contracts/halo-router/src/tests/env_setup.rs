@@ -42,7 +42,7 @@ pub mod env {
     pub const HALO_TOKEN_SYMBOL: &str = "HALO";
     pub const HALO_TOKEN_NAME: &str = "Halo Token";
     pub const HALO_TOKEN_DECIMALS: u8 = 18;
-    pub const HALO_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000u128;
+    pub const HALO_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000_000_000_000_000u128;
 
     pub const MSTR_TOKEN_SYMBOL: &str = "MSTR";
     pub const MSTR_TOKEN_NAME: &str = "MSTR Token";
@@ -207,7 +207,7 @@ pub mod env {
         let halo_token_contract_instantiate_msg = HaloTokenInstantiateMsg {
             name: HALO_TOKEN_NAME.to_string(),
             symbol: HALO_TOKEN_SYMBOL.to_string(),
-            decimals: 6,
+            decimals: 18,
             initial_balances: vec![],
             mint: Some(MinterResponse {
                 minter: ADMIN.to_string(), // the minter of the cw20 token must be the marketplace contract
