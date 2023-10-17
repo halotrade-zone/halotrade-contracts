@@ -422,14 +422,14 @@ mod tests {
                                 denom: NATIVE_DENOM_2.to_string(),
                             },
                             // Verify the native token amount is increased
-                            amount: Uint128::from(2000000000000000000001000u128),
+                            amount: Uint128::from(2000000000000000000000990u128),
                         },
                         Asset {
                             info: AssetInfo::Token {
                                 contract_addr: "contract2".to_string(),
                             },
                             // Verify the cw20 token amount is decreased
-                            amount: Uint128::from(999999999999999999999515u128),
+                            amount: Uint128::from(999999999999999999999519u128),
                         },
                     ],
                     // Verify the total share amount is reserved 1 uLP
@@ -452,7 +452,7 @@ mod tests {
             assert_eq!(
                 response,
                 BalanceResponse {
-                    balance: Uint128::from(999000000000000000000000485u128),
+                    balance: Uint128::from(999000000000000000000000481u128),
                 }
             );
 
@@ -577,7 +577,7 @@ mod tests {
                 // USER_1 should lose 2 native token that already reserved for the Pool
                 // and 10000 utaura native token for transaction fee
                 Uint128::from(
-                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - 2000001u128 - MOCK_TRANSACTION_FEE * 2
+                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - 2000001u128 - MOCK_TRANSACTION_FEE * 2 - 10u128
                 )
             );
         }
@@ -607,7 +607,7 @@ mod tests {
                 cw_multi_test::BankSudo::Mint {
                     to_address: USER_1.to_string(),
                     amount: vec![Coin {
-                        amount: Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT),
+                        amount: Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT),
                         denom: NATIVE_DENOM.to_string(),
                     }],
                 },
@@ -619,7 +619,7 @@ mod tests {
                 cw_multi_test::BankSudo::Mint {
                     to_address: USER_1.to_string(),
                     amount: vec![Coin {
-                        amount: Uint128::from(MOCK_1000_NATIVE_TOKEN_AMOUNT),
+                        amount: Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT),
                         denom: NATIVE_DENOM_2.to_string(),
                     }],
                 },
@@ -629,7 +629,7 @@ mod tests {
             // Mint 1000 HALO tokens to USER_1
             let mint_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Mint {
                 recipient: USER_1.to_string(),
-                amount: Uint128::from(MOCK_1000_HALO_TOKEN_AMOUNT),
+                amount: Uint128::from(MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT),
             };
 
             // Execute minting
@@ -761,7 +761,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
-            assert_eq!(response.asset_decimals, [6u8, 6u8]);
+            assert_eq!(response.asset_decimals, [6u8, 18u8]);
 
             // Create Pair: NATIVE_DENOM_2 - HALO Token
             let asset_infos = [
@@ -819,7 +819,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
-            assert_eq!(response.asset_decimals, [6u8, 6u8]);
+            assert_eq!(response.asset_decimals, [6u8, 18u8]);
 
             // Create Pair: NATIVE_DENOM - NATIVE_DENOM_2
             let asset_infos = [
@@ -936,7 +936,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
-            assert_eq!(response.asset_decimals, [8u8, 6u8]);
+            assert_eq!(response.asset_decimals, [8u8, 18u8]);
 
             // Query NATIVE_DENOM_2 - HALO Pair
             let response: PairInfo = app
@@ -957,7 +957,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
-            assert_eq!(response.asset_decimals, [9u8, 6u8]);
+            assert_eq!(response.asset_decimals, [9u8, 18u8]);
 
             // Query NATIVE_DENOM - NATIVE_DENOM_2 Pair
             let response: PairInfo = app
@@ -987,7 +987,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM in Pair
-            assert_eq!(response.asset_decimals, [8u8, 6u8]);
+            assert_eq!(response.asset_decimals, [8u8, 18u8]);
 
             // Query Pair of NATIVE_DENOM_2 - HALO Pair
             let response: PairInfo = app
@@ -996,7 +996,7 @@ mod tests {
                 .unwrap();
 
             // Assert token decimals of NATIVE_DENOM_2 in Pair
-            assert_eq!(response.asset_decimals, [9u8, 6u8]);
+            assert_eq!(response.asset_decimals, [9u8, 18u8]);
 
             // Query Pair of NATIVE_DENOM - NATIVE_DENOM_2 Pair
             let response: PairInfo = app
@@ -1235,7 +1235,7 @@ mod tests {
                             amount: Uint128::from(49867841058u128),
                         },
                     ],
-                    total_share: Uint128::from(157061949471125618u128),
+                    total_share: Uint128::from(157061889098587506u128),
                 }
             );
 
@@ -1643,13 +1643,13 @@ mod tests {
             // Assert Balance of USER_1 in LP Token
             assert_eq!(
                 user_1_lp_response.balance,
-                Uint128::from(340282366919999999999999999999u128),
+                Uint128::from(340282366740454746505774260239u128),
             );
 
             // Withdraw Liquidity msg
             let msg = Cw20HookMsg::WithdrawLiquidity {};
 
-            // Send 340282366919999999999999999999 LP Token to Pair Contract
+            // Send 340282366740454746505774260239 LP Token to Pair Contract
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: user_1_lp_response.balance,
