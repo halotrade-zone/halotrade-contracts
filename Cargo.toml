@@ -23,11 +23,11 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 [workspace.dependencies]
 bignumber           = { path = "./packages/bignumber", default-features = false, version = "1.0.0" }
 haloswap            = { path = "./packages/haloswap", default-features = false, version = "1.0.0" }
-halo-factory        = { path = "./contracts/halo-factory" }
-halo-stable-factory = { path = "./contracts/halo-stable-factory" }
-halo-pair           = { path = "./contracts/halo-pair" }
-halo-router         = { path = "./contracts/halo-router" }
-halo-stable-pool    = { path = "./contracts/halo-stable-pool" }
+halo-factory        = { path = "./contracts/halo-factory", features = ["library"] }
+halo-stable-factory = { path = "./contracts/halo-stable-factory", features = ["library"] }
+halo-pair           = { path = "./contracts/halo-pair", features = ["library"] }
+halo-router         = { path = "./contracts/halo-router", features = ["library"] }
+halo-stable-pool    = { path = "./contracts/halo-stable-pool", features = ["library"] }
 bigint              = "4.4.3"
 cosmwasm-schema     = "1.1.8"
 cosmwasm-std        = "1.1.8"
