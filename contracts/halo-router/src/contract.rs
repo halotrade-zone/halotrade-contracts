@@ -15,7 +15,9 @@ use halo_stable_pool::state::StablePoolInfo;
 
 use crate::assert::{assert_minium_receive, assert_operations};
 use crate::operations::execute_swap_operation;
-use crate::state::{Config, PlatformInfo, CONFIG, PLATFORM_INFO, STABLE_FACTORY_CONFIG, StableFactoryConfig};
+use crate::state::{
+    Config, PlatformInfo, StableFactoryConfig, CONFIG, PLATFORM_INFO, STABLE_FACTORY_CONFIG,
+};
 
 use cw20::Cw20ReceiveMsg;
 use haloswap::asset::{Asset, AssetInfo, PairInfo};
@@ -329,17 +331,14 @@ fn simulate_swap_operations(
                     },
                 )?;
                 offer_amount = res.return_amount;
-            },
+            }
             SwapOperation::StableSwap {
                 offer_asset_info,
                 ask_asset_info,
-                asset_infos
+                asset_infos,
             } => {
-                let stable_pool_info: StablePoolInfo = query_stable_pool_info(
-                    &deps.querier,
-                    halo_factory.clone(),
-                    &asset_infos,
-                )?;
+                let stable_pool_info: StablePoolInfo =
+                    query_stable_pool_info(&deps.querier, halo_factory.clone(), &asset_infos)?;
 
                 let res: SimulationResponse = stable_simulate(
                     &deps.querier,
@@ -393,10 +392,8 @@ fn reverse_simulate_swap_operations(
             SwapOperation::StableSwap {
                 offer_asset_info,
                 ask_asset_info,
-                asset_infos
-            } => {
-                Uint128::zero()
-            }
+                asset_infos,
+            } => Uint128::zero(),
         }
     }
 

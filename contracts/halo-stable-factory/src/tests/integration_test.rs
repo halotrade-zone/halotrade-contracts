@@ -19,17 +19,26 @@ mod tests {
 
         use std::str::FromStr;
 
-        use bignumber::Decimal256;
-        use cosmwasm_std::{Addr, Coin, Uint128, to_binary};
-        use cw20::{Cw20ExecuteMsg, BalanceResponse, Cw20QueryMsg};
-        use cw_multi_test::Executor;
-        use halo_stable_pool::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor, msg::Cw20StableHookMsg};
-        use haloswap::asset::{AssetInfo, LPTokenInfo, Asset, CreatePairRequirements};
-        use haloswap::factory::{
-            ExecuteMsg as HaloFactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as HaloFactoryQueryMsg,
+        use crate::msg::{
+            ExecuteMsg as StableFactoryExecuteMsg, QueryMsg as StableFactoryQueryMsg,
         };
-        use crate::msg::{ExecuteMsg as StableFactoryExecuteMsg, QueryMsg as StableFactoryQueryMsg};
-        use halo_stable_pool::msg::{ExecuteMsg as StablePoolExecuteMsg, QueryMsg as StablePoolQueryMsg};
+        use bignumber::Decimal256;
+        use cosmwasm_std::{to_binary, Addr, Coin, Uint128};
+        use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
+        use cw_multi_test::Executor;
+        use halo_stable_pool::msg::{
+            ExecuteMsg as StablePoolExecuteMsg, QueryMsg as StablePoolQueryMsg,
+        };
+        use halo_stable_pool::{
+            math::AmpFactor,
+            msg::Cw20StableHookMsg,
+            state::{CreateStablePoolRequirements, StablePoolInfo},
+        };
+        use haloswap::asset::{Asset, AssetInfo, CreatePairRequirements, LPTokenInfo};
+        use haloswap::factory::{
+            ExecuteMsg as HaloFactoryExecuteMsg, NativeTokenDecimalsResponse,
+            QueryMsg as HaloFactoryQueryMsg,
+        };
 
         use super::*;
         // Create a stable swap pool with 3 tokens USDC, USDT, BUSD
@@ -130,7 +139,11 @@ mod tests {
                 asset_infos,
                 requirements: CreateStablePoolRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
-                    asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
                 },
                 commission_rate: None,
                 lp_token_info: LPTokenInfo {
@@ -201,7 +214,11 @@ mod tests {
                     asset_decimals: vec![18, 18, 18],
                     requirements: CreateStablePoolRequirements {
                         whitelist: vec![Addr::unchecked(ADMIN.to_string())],
-                        asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                        asset_minimum: vec![
+                            Uint128::from(1u128),
+                            Uint128::from(1u128),
+                            Uint128::from(1u128)
+                        ],
                     },
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                 }
@@ -416,10 +433,9 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDC
-                        - 1 * DECIMAL_6
-                        - 100_000u128 * DECIMAL_6
-                        + 50_000_499_999u128),
+                        MOCK_1_000_000_000_USDC - 1 * DECIMAL_6 - 100_000u128 * DECIMAL_6
+                            + 50_000_499_999u128
+                    ),
                 }
             );
 
@@ -439,10 +455,9 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDT
-                        - 1 * DECIMAL_6
-                        - 200_000u128 * DECIMAL_6
-                        + 100_000_499_999u128),
+                        MOCK_1_000_000_000_USDT - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                            + 100_000_499_999u128
+                    ),
                 }
             );
 
@@ -462,10 +477,9 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_BUSD
-                        - 1 * DECIMAL_6
-                        - 200_000u128 * DECIMAL_6
-                        + 100_000_499_999u128),
+                        MOCK_1_000_000_000_BUSD - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                            + 100_000_499_999u128
+                    ),
                 }
             );
 
@@ -542,11 +556,10 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDC
-                        - 1 * DECIMAL_6
-                        - 100_000u128 * DECIMAL_6
-                        + 50_000_499_999u128
-                        + 25_000u128 * DECIMAL_6),
+                        MOCK_1_000_000_000_USDC - 1 * DECIMAL_6 - 100_000u128 * DECIMAL_6
+                            + 50_000_499_999u128
+                            + 25_000u128 * DECIMAL_6
+                    ),
                 }
             );
 
@@ -566,11 +579,10 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDT
-                        - 1 * DECIMAL_6
-                        - 200_000u128 * DECIMAL_6
-                        + 100_000_499_999u128
-                        + 50_000 * DECIMAL_6),
+                        MOCK_1_000_000_000_USDT - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                            + 100_000_499_999u128
+                            + 50_000 * DECIMAL_6
+                    ),
                 }
             );
 
@@ -590,11 +602,10 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_BUSD
-                        - 1 * DECIMAL_6
-                        - 200_000u128 * DECIMAL_6
-                        + 100_000_499_999u128
-                        + 50_000 * DECIMAL_6),
+                        MOCK_1_000_000_000_BUSD - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                            + 100_000_499_999u128
+                            + 50_000 * DECIMAL_6
+                    ),
                 }
             );
 
@@ -616,7 +627,6 @@ mod tests {
                     balance: Uint128::from(125_001_135_663u128),
                 }
             );
-
         }
 
         // Create a stable swap pool with 3 tokens USDC, USDT, BUSD
@@ -725,7 +735,11 @@ mod tests {
                 asset_infos,
                 requirements: CreateStablePoolRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
-                    asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
                 },
                 commission_rate: None,
                 lp_token_info: LPTokenInfo {
@@ -796,7 +810,11 @@ mod tests {
                     asset_decimals: vec![18, 18, 18],
                     requirements: CreateStablePoolRequirements {
                         whitelist: vec![Addr::unchecked(ADMIN.to_string())],
-                        asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                        asset_minimum: vec![
+                            Uint128::from(1u128),
+                            Uint128::from(1u128),
+                            Uint128::from(1u128)
+                        ],
                     },
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                 }
@@ -950,10 +968,7 @@ mod tests {
             // assert USDC Balance of ADMIN before swap
             assert_eq!(
                 usdc_balance_before_swap.balance,
-                Uint128::from(
-                    MOCK_1_000_000_000_USDC
-                    - 1 * DECIMAL_6
-                    - 100_000u128 * DECIMAL_6),
+                Uint128::from(MOCK_1_000_000_000_USDC - 1 * DECIMAL_6 - 100_000u128 * DECIMAL_6),
             );
 
             // Query USDT Balance of ADMIN before swap
@@ -970,10 +985,7 @@ mod tests {
             // assert USDT Balance of ADMIN before swap
             assert_eq!(
                 usdt_balance_before_swap.balance,
-                Uint128::from(
-                    MOCK_1_000_000_000_USDT
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6),
+                Uint128::from(MOCK_1_000_000_000_USDT - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6),
             );
 
             // ADMIN swap 1 USDC to USDT
@@ -1025,9 +1037,10 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                    - 1 * DECIMAL_6
-                    - 100_000u128 * DECIMAL_6
-                    - 1 * DECIMAL_6), // 1 USDC transferred to the stable pool
+                        - 1 * DECIMAL_6
+                        - 100_000u128 * DECIMAL_6
+                        - 1 * DECIMAL_6
+                ), // 1 USDC transferred to the stable pool
             );
 
             // Query USDT Balance of ADMIN after swap
@@ -1045,10 +1058,9 @@ mod tests {
             assert_eq!(
                 usdt_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_USDT
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6
-                    + 1_000_053u128), // 1 USDT received from the stable pool
+                    MOCK_1_000_000_000_USDT - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                        + 1_000_053u128
+                ), // 1 USDT received from the stable pool
             );
 
             // ADMIN swap 9 USDT to BUSD
@@ -1099,11 +1111,10 @@ mod tests {
             assert_eq!(
                 usdt_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_USDT
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6
-                    + 1_000_053u128
-                    - 9 * DECIMAL_6), // 9 USDT transferred to the stable pool
+                    MOCK_1_000_000_000_USDT - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                        + 1_000_053u128
+                        - 9 * DECIMAL_6
+                ), // 9 USDT transferred to the stable pool
             );
 
             // Query BUSD Balance of ADMIN after swap
@@ -1121,10 +1132,9 @@ mod tests {
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_BUSD
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6
-                    + 8_999_999u128), // 9 BUSD received from the stable pool
+                    MOCK_1_000_000_000_BUSD - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                        + 8_999_999u128
+                ), // 9 BUSD received from the stable pool
             );
 
             // ADMIN swap 100 BUSD to USDC
@@ -1175,11 +1185,10 @@ mod tests {
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_BUSD
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6
-                    + 8_999_999u128
-                    - 100 * DECIMAL_6), // 100 BUSD transferred to the stable pool
+                    MOCK_1_000_000_000_BUSD - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                        + 8_999_999u128
+                        - 100 * DECIMAL_6
+                ), // 100 BUSD transferred to the stable pool
             );
 
             // Query USDC Balance of ADMIN after swap
@@ -1198,10 +1207,11 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                    - 1 * DECIMAL_6
-                    - 100_000u128 * DECIMAL_6
-                    - 1 * DECIMAL_6
-                    + 99_994_630u128), // 100 USDC received from the stable pool
+                        - 1 * DECIMAL_6
+                        - 100_000u128 * DECIMAL_6
+                        - 1 * DECIMAL_6
+                        + 99_994_630u128
+                ), // 100 USDC received from the stable pool
             );
 
             // ADMIN swap 50_000 USDC to USDT
@@ -1253,11 +1263,12 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                    - 1 * DECIMAL_6
-                    - 100_000u128 * DECIMAL_6
-                    - 1 * DECIMAL_6
-                    + 99_994_630u128
-                    - 50_000 * DECIMAL_6), // 50_000 USDC transferred to the stable pool
+                        - 1 * DECIMAL_6
+                        - 100_000u128 * DECIMAL_6
+                        - 1 * DECIMAL_6
+                        + 99_994_630u128
+                        - 50_000 * DECIMAL_6
+                ), // 50_000 USDC transferred to the stable pool
             );
 
             // Query USDT Balance of ADMIN after swap
@@ -1275,12 +1286,11 @@ mod tests {
             assert_eq!(
                 usdt_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_USDT
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6
-                    + 1_000_053u128
-                    - 9 * DECIMAL_6
-                    + 50_000_001_866u128), // 50_000 USDT received from the stable pool
+                    MOCK_1_000_000_000_USDT - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                        + 1_000_053u128
+                        - 9 * DECIMAL_6
+                        + 50_000_001_866u128
+                ), // 50_000 USDT received from the stable pool
             );
 
             // provide liquidity to the pool one more time
@@ -1371,13 +1381,14 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                    - 1 * DECIMAL_6
-                    - 100_000u128 * DECIMAL_6
-                    - 1 * DECIMAL_6
-                    + 99_994_630u128
-                    - 50_000 * DECIMAL_6
-                    - 100_000_000u128 * DECIMAL_6
-                    - 10_000_000 * DECIMAL_6), // 100_000_000 USDC transferred to the stable pool
+                        - 1 * DECIMAL_6
+                        - 100_000u128 * DECIMAL_6
+                        - 1 * DECIMAL_6
+                        + 99_994_630u128
+                        - 50_000 * DECIMAL_6
+                        - 100_000_000u128 * DECIMAL_6
+                        - 10_000_000 * DECIMAL_6
+                ), // 100_000_000 USDC transferred to the stable pool
             );
 
             // Query BUSD Balance of ADMIN after swap
@@ -1395,13 +1406,12 @@ mod tests {
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_BUSD
-                    - 1 * DECIMAL_6
-                    - 200_000u128 * DECIMAL_6
-                    + 8_999_999u128
-                    - 100 * DECIMAL_6
-                    - 200_000_000u128 * DECIMAL_6
-                    + 10_000_326_281_165u128), // 10_000_000 BUSD received from the stable pool
+                    MOCK_1_000_000_000_BUSD - 1 * DECIMAL_6 - 200_000u128 * DECIMAL_6
+                        + 8_999_999u128
+                        - 100 * DECIMAL_6
+                        - 200_000_000u128 * DECIMAL_6
+                        + 10_000_326_281_165u128
+                ), // 10_000_000 BUSD received from the stable pool
             );
         }
     }

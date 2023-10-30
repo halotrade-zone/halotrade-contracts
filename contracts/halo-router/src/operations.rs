@@ -3,10 +3,10 @@ use cosmwasm_std::{
     StdResult, WasmMsg,
 };
 use halo_stable_factory::query::query_stable_pool_info;
-use halo_stable_pool::state::StablePoolInfo;
 use halo_stable_pool::msg::ExecuteMsg as StablePoolExecuteMsg;
+use halo_stable_pool::state::StablePoolInfo;
 
-use crate::state::{Config, CONFIG, STABLE_FACTORY_CONFIG, StableFactoryConfig};
+use crate::state::{Config, StableFactoryConfig, CONFIG, STABLE_FACTORY_CONFIG};
 
 use cw20::Cw20ExecuteMsg;
 use haloswap::asset::{Asset, AssetInfo, PairInfo};
@@ -61,7 +61,7 @@ pub fn execute_swap_operation(
                 None,
                 to,
             )?]
-        },
+        }
         SwapOperation::StableSwap {
             offer_asset_info,
             ask_asset_info,
@@ -71,11 +71,8 @@ pub fn execute_swap_operation(
             let config: StableFactoryConfig = STABLE_FACTORY_CONFIG.load(deps.as_ref().storage)?;
             let stable_factory = deps.api.addr_humanize(&config.halo_stable_factory)?;
 
-            let stable_pool_info: StablePoolInfo = query_stable_pool_info(
-                &deps.querier,
-                stable_factory,
-                &asset_infos,
-            )?;
+            let stable_pool_info: StablePoolInfo =
+                query_stable_pool_info(&deps.querier, stable_factory, &asset_infos)?;
 
             let amount = match offer_asset_info.clone() {
                 AssetInfo::NativeToken { denom } => {

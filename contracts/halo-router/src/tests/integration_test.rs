@@ -577,7 +577,10 @@ mod tests {
                 // USER_1 should lose 2 native token that already reserved for the Pool
                 // and 10000 utaura native token for transaction fee
                 Uint128::from(
-                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT - 2000001u128 - MOCK_TRANSACTION_FEE * 2 - 10u128
+                    MOCK_1000_000_000_NATIVE_TOKEN_AMOUNT
+                        - 2000001u128
+                        - MOCK_TRANSACTION_FEE * 2
+                        - 10u128
                 )
             );
         }

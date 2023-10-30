@@ -33,10 +33,10 @@ pub mod env {
         query as HaloStablePoolQuery, reply as HaloStablePoolReply,
     };
 
+    use halo_stable_factory::msg::InstantiateMsg as HaloStableFactoryInstantiateMsg;
     use haloswap::factory::InstantiateMsg as HaloFactoryInstantiateMsg;
     use haloswap::router::InstantiateMsg as HaloRouterInstantiateMsg;
     use haloswap::token::InstantiateMsg as HaloTokenInstantiateMsg;
-    use halo_stable_factory::msg::InstantiateMsg as HaloStableFactoryInstantiateMsg;
 
     // ****************************************
     // You MUST define the constants value here
@@ -183,8 +183,10 @@ pub mod env {
         let halo_pair_contract_code_id = app.store_code(halo_pair_contract_template());
         let halo_router_contract_code_id = app.store_code(halo_router_contract_template());
         let halo_token_contract_code_id = app.store_code(halo_token_contract_template());
-        let halo_stable_factory_contract_code_id = app.store_code(halo_stable_factory_contract_template());
-        let halo_stable_pool_contract_code_id = app.store_code(halo_stable_pool_contract_template());
+        let halo_stable_factory_contract_code_id =
+            app.store_code(halo_stable_factory_contract_template());
+        let halo_stable_pool_contract_code_id =
+            app.store_code(halo_stable_pool_contract_template());
 
         // halo factory contract
         // create instantiate message for contract

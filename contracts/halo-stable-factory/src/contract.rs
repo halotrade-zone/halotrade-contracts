@@ -3,18 +3,26 @@ use std::str::FromStr;
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, StdError, SubMsg, CosmosMsg, WasmMsg, attr, to_binary, ReplyOn, Reply, Addr, Deps, Binary};
+use cosmwasm_std::{
+    attr, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn,
+    Response, StdError, StdResult, SubMsg, WasmMsg,
+};
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use halo_stable_pool::math::AmpFactor;
-use halo_stable_pool::state::{CreateStablePoolRequirements, DEFAULT_COMMISSION_RATE, StablePoolInfoRaw, StablePoolInfo};
 use halo_stable_pool::msg::InstantiateMsg as StablePoolInstantiateMsg;
-use haloswap::asset::{AssetInfo, LPTokenInfo, AssetInfoRaw};
+use halo_stable_pool::state::{
+    CreateStablePoolRequirements, StablePoolInfo, StablePoolInfoRaw, DEFAULT_COMMISSION_RATE,
+};
+use haloswap::asset::{AssetInfo, AssetInfoRaw, LPTokenInfo};
 
-use crate::msg::{QueryMsg, ConfigResponse};
+use crate::msg::{ConfigResponse, QueryMsg};
 use crate::query::query_stable_pool_info_from_stable_pools;
 use crate::state::STABLE_POOLS;
-use crate::{msg::{InstantiateMsg, ExecuteMsg}, state::{Config, CONFIG, pair_key, TMP_STABLE_POOL_INFO, TmpStablePoolInfo}};
+use crate::{
+    msg::{ExecuteMsg, InstantiateMsg},
+    state::{pair_key, Config, TmpStablePoolInfo, CONFIG, TMP_STABLE_POOL_INFO},
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:halo-stable-factory";
@@ -108,7 +116,7 @@ pub fn execute_create_stable_pool(
             Ok(decimal) => {
                 asset_decimals.push(decimal);
                 raw_infos.push(asset_info.to_raw(deps.api)?);
-            },
+            }
             Err(_) => return Err(StdError::generic_err("asset is invalid")),
         }
     }
@@ -127,9 +135,18 @@ pub fn execute_create_stable_pool(
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_stable_pool"),
-            ("stable_assets", &format!("{}",
-            // Loop and add all asset_info to get stable assets
-            &asset_infos.iter().map(|asset_info| asset_info.to_string()).collect::<Vec<String>>().join(","))),
+            (
+                "stable_assets",
+                &format!(
+                    "{}",
+                    // Loop and add all asset_info to get stable assets
+                    &asset_infos
+                        .iter()
+                        .map(|asset_info| asset_info.to_string())
+                        .collect::<Vec<String>>()
+                        .join(",")
+                ),
+            ),
         ])
         .add_submessage(SubMsg {
             id: 1,
@@ -151,7 +168,7 @@ pub fn execute_create_stable_pool(
                         lp_token_symbol: lp_token_info.lp_token_symbol,
                         lp_token_decimals: lp_token_info.lp_token_decimals,
                     },
-                    amp_factor_info
+                    amp_factor_info,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -166,7 +183,10 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     let reply = parse_reply_instantiate_data(msg).unwrap();
 
     let stable_pool_contract = &reply.contract_address;
-    let stable_pool_info = query_stable_pool_info_from_stable_pools(&deps.querier, Addr::unchecked(stable_pool_contract))?;
+    let stable_pool_info = query_stable_pool_info_from_stable_pools(
+        &deps.querier,
+        Addr::unchecked(stable_pool_contract),
+    )?;
 
     STABLE_POOLS.save(
         deps.storage,
@@ -177,7 +197,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
             asset_infos: tmp_stable_pool_info.asset_infos,
             asset_decimals: tmp_stable_pool_info.asset_decimals,
             requirements: stable_pool_info.requirements,
-            commission_rate: Decimal256::from_str(&stable_pool_info.commission_rate.to_string()).unwrap(),
+            commission_rate: Decimal256::from_str(&stable_pool_info.commission_rate.to_string())
+                .unwrap(),
         },
     )?;
 
@@ -198,7 +219,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let state: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
-        owner: deps.api.addr_validate(&state.owner.to_string())?.to_string(),
+        owner: deps
+            .api
+            .addr_validate(&state.owner.to_string())?
+            .to_string(),
         token_code_id: state.token_code_id,
         stable_pool_code_id: state.stable_pool_code_id,
     };

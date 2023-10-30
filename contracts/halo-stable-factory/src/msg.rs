@@ -1,6 +1,9 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use halo_stable_pool::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
+use halo_stable_pool::{
+    math::AmpFactor,
+    state::{CreateStablePoolRequirements, StablePoolInfo},
+};
 use haloswap::asset::{AssetInfo, LPTokenInfo};
 
 #[cw_serde]

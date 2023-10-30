@@ -1,8 +1,8 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128, CanonicalAddr, StdResult, Api, QuerierWrapper};
+use cosmwasm_std::{Addr, Api, CanonicalAddr, QuerierWrapper, StdResult, Uint128};
 use cw_storage_plus::Item;
-use haloswap::asset::{AssetInfoRaw, AssetInfo, Asset};
+use haloswap::asset::{Asset, AssetInfo, AssetInfoRaw};
 
 use crate::math::AmpFactor;
 
@@ -42,12 +42,20 @@ pub struct StablePoolInfoRaw {
     pub commission_rate: Decimal256,
 }
 
-impl StablePoolInfoRaw{
+impl StablePoolInfoRaw {
     pub fn to_normal(&self, api: &dyn Api) -> StdResult<StablePoolInfo> {
         Ok(StablePoolInfo {
-            asset_infos: self.asset_infos.iter().map(|x| x.to_normal(api)).collect::<StdResult<Vec<AssetInfo>>>()?,
-            contract_addr: api.addr_validate(&self.contract_addr.to_string())?.to_string(),
-            liquidity_token: api.addr_validate(&self.liquidity_token.to_string())?.to_string(),
+            asset_infos: self
+                .asset_infos
+                .iter()
+                .map(|x| x.to_normal(api))
+                .collect::<StdResult<Vec<AssetInfo>>>()?,
+            contract_addr: api
+                .addr_validate(&self.contract_addr.to_string())?
+                .to_string(),
+            liquidity_token: api
+                .addr_validate(&self.liquidity_token.to_string())?
+                .to_string(),
             asset_decimals: self.asset_decimals.clone(),
             requirements: self.requirements.clone(),
             commission_rate: self.commission_rate,
@@ -60,7 +68,11 @@ impl StablePoolInfoRaw{
         api: &dyn Api,
         contract_addr: Addr,
     ) -> StdResult<Vec<Asset>> {
-        let info: Vec<AssetInfo> = self.asset_infos.iter().map(|x| x.to_normal(api)).collect::<StdResult<Vec<AssetInfo>>>()?;
+        let info: Vec<AssetInfo> = self
+            .asset_infos
+            .iter()
+            .map(|x| x.to_normal(api))
+            .collect::<StdResult<Vec<AssetInfo>>>()?;
         let mut assets: Vec<Asset> = Vec::new();
         for asset_info in info.iter() {
             let asset = Asset {

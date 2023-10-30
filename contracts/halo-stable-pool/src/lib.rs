@@ -1,6 +1,6 @@
-pub mod contract;
-pub mod msg;
-pub mod state;
 pub mod assert;
+pub mod contract;
 pub mod math;
+pub mod msg;
 pub mod querier;
+pub mod state;

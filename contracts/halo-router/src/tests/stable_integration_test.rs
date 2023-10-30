@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
     use crate::tests::stable_env_setup::env::{
-        instantiate_contracts, ADMIN, ContractInfo, HALO_TOKEN_DECIMALS, HALO_TOKEN_INITIAL_SUPPLY, HALO_TOKEN_NAME, HALO_TOKEN_SYMBOL,
-        NATIVE_BALANCE, NATIVE_BALANCE_2, NATIVE_DENOM, NATIVE_DENOM_2, USER_1,
+        instantiate_contracts, ContractInfo, ADMIN, HALO_TOKEN_DECIMALS, HALO_TOKEN_INITIAL_SUPPLY,
+        HALO_TOKEN_NAME, HALO_TOKEN_SYMBOL, NATIVE_BALANCE, NATIVE_BALANCE_2, NATIVE_DENOM,
+        NATIVE_DENOM_2, USER_1,
     };
     use bignumber::Decimal256;
     use cosmwasm_std::{
@@ -11,21 +12,19 @@ mod tests {
     };
     use cw20::{BalanceResponse, TokenInfoResponse};
     use cw20_base::{msg::ExecuteMsg as Cw20ExecuteMsg, msg::QueryMsg as Cw20QueryMsg};
-    use haloswap::asset::{AssetInfo, CreatePairRequirements, PairInfo};
-    use haloswap::factory::{
-        ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
-    };
-    use haloswap::pair::Cw20HookMsg;
-    use haloswap::router::QueryMsg as RouterQueryMsg;
     use halo_stable_factory::msg::{
         ExecuteMsg as StableFactoryExecuteMsg, QueryMsg as StableFactoryQueryMsg,
     };
     use halo_stable_pool::msg::{
         ExecuteMsg as StablePoolExecuteMsg, QueryMsg as StablePoolQueryMsg,
     };
+    use haloswap::asset::{AssetInfo, CreatePairRequirements, PairInfo};
     use haloswap::factory::{
-        ExecuteMsg as HaloFactoryExecuteMsg, QueryMsg as HaloFactoryQueryMsg,
+        ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
     };
+    use haloswap::factory::{ExecuteMsg as HaloFactoryExecuteMsg, QueryMsg as HaloFactoryQueryMsg};
+    use haloswap::pair::Cw20HookMsg;
+    use haloswap::router::QueryMsg as RouterQueryMsg;
     // Mock information for CW20 token contract
     const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
     // Mock information for native token
@@ -36,10 +35,12 @@ mod tests {
     const DECIMAL_FRACTIONAL_18: u128 = 1_000_000_000_000_000_000u128;
 
     mod execute_interacting_with_stable_swap {
-        use std::str::FromStr;
         use cosmwasm_std::{Querier, WasmQuery};
         use cw_multi_test::Executor;
-        use halo_stable_pool::{math::AmpFactor, state::{CreateStablePoolRequirements, StablePoolInfo}};
+        use halo_stable_pool::{
+            math::AmpFactor,
+            state::{CreateStablePoolRequirements, StablePoolInfo},
+        };
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
             pair::{
@@ -47,6 +48,7 @@ mod tests {
             },
             router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
         };
+        use std::str::FromStr;
 
         use super::*;
 
@@ -62,7 +64,6 @@ mod tests {
         const DECIMAL_6: u128 = 1_000_000u128;
 
         const MOCK_TRANSACTION_FEE: u128 = 5000;
-
 
         // Create a stable pool with 3 tokens USDC, USDT, BUSD
         // Provide liquidity to the stable pool (10000 USDC, 20000 USDT, 30000 BUSD)
@@ -163,7 +164,11 @@ mod tests {
                 asset_infos,
                 requirements: CreateStablePoolRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
-                    asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
                 },
                 commission_rate: None,
                 lp_token_info: LPTokenInfo {
@@ -234,7 +239,11 @@ mod tests {
                     asset_decimals: vec![18, 18, 18],
                     requirements: CreateStablePoolRequirements {
                         whitelist: vec![Addr::unchecked(ADMIN.to_string())],
-                        asset_minimum: vec![Uint128::from(1u128), Uint128::from(1u128), Uint128::from(1u128)],
+                        asset_minimum: vec![
+                            Uint128::from(1u128),
+                            Uint128::from(1u128),
+                            Uint128::from(1u128)
+                        ],
                     },
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                 }
@@ -559,32 +568,35 @@ mod tests {
 
             // Swap 100 NATIVE to USDT via router with operation HaloSwap(AURA -> USDC) and HaloSwap(USDC -> USDT)
             let swap_msg = RouterExecuteMsg::ExecuteSwapOperations {
-                operations: vec![SwapOperation::HaloSwap {
-                    offer_asset_info: AssetInfo::NativeToken {
-                        denom: NATIVE_DENOM_2.to_string(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: usdc_token_contract.clone(),
-                    },
-                }, SwapOperation::StableSwap {
-                    offer_asset_info: AssetInfo::Token {
-                        contract_addr: usdc_token_contract.clone(),
-                    },
-                    ask_asset_info: AssetInfo::Token {
-                        contract_addr: usdt_token_contract.clone(),
-                    },
-                    asset_infos: vec![
-                        AssetInfo::Token {
+                operations: vec![
+                    SwapOperation::HaloSwap {
+                        offer_asset_info: AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM_2.to_string(),
+                        },
+                        ask_asset_info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        AssetInfo::Token {
+                    },
+                    SwapOperation::StableSwap {
+                        offer_asset_info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        ask_asset_info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        AssetInfo::Token {
-                            contract_addr: busd_token_contract.clone(),
-                        },
-                    ],
-                }],
+                        asset_infos: vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                        ],
+                    },
+                ],
                 minimum_receive: None,
                 to: None,
             };
@@ -613,9 +625,8 @@ mod tests {
             // Assert balance of ADMIN in NATIVE_DENOM_2 after swap
             assert_eq!(
                 balance.amount.amount,
-                denom_2_balance_before_swap.amount.amount
-                - Uint128::from(100u128 * DECIMAL_6)
-                + Uint128::from(1u128 * DECIMAL_6), // platform fee back to ADMIN
+                denom_2_balance_before_swap.amount.amount - Uint128::from(100u128 * DECIMAL_6)
+                    + Uint128::from(1u128 * DECIMAL_6), // platform fee back to ADMIN
             );
 
             // query balance of ADMIN in USDT after swap
@@ -633,10 +644,8 @@ mod tests {
             // Assert balance of ADMIN in USDT after swap
             assert_eq!(
                 usdt_balance_after_swap.balance,
-                usdt_balance_before_swap.balance
-                + Uint128::from(94172249u128),
+                usdt_balance_before_swap.balance + Uint128::from(94172249u128),
             );
-
         }
     }
 }

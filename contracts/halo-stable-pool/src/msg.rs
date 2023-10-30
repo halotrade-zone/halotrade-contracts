@@ -1,10 +1,16 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128, Addr};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
-use haloswap::{asset::{LPTokenInfo, AssetInfo, Asset}, pair::SimulationResponse};
+use haloswap::{
+    asset::{Asset, AssetInfo, LPTokenInfo},
+    pair::SimulationResponse,
+};
 
-use crate::{state::{CreateStablePoolRequirements, StablePoolInfo}, math::AmpFactor};
+use crate::{
+    math::AmpFactor,
+    state::{CreateStablePoolRequirements, StablePoolInfo},
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -70,17 +76,9 @@ pub enum QueryMsg {
         ask_asset: AssetInfo,
     },
     #[returns(Uint128)]
-    ProvideLiquiditySimulation {
-        assets: Vec<Asset>,
-    },
+    ProvideLiquiditySimulation { assets: Vec<Asset> },
     #[returns(Vec<Uint128>)]
-    RemoveLiquidityByShareSimulation {
-        share: Uint128,
-    },
+    RemoveLiquidityByShareSimulation { share: Uint128 },
     #[returns(Uint128)]
-    RemoveLiquidityByTokenSimulation {
-        assets: Vec<Asset>,
-    },
+    RemoveLiquidityByTokenSimulation { assets: Vec<Asset> },
 }
-
-

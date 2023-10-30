@@ -1,5 +1,5 @@
 use bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{Decimal, Uint128, StdError};
+use cosmwasm_std::{Decimal, StdError, Uint128};
 use haloswap::{asset::Asset, error::ContractError};
 
 pub fn assert_stable_slippage_tolerance(

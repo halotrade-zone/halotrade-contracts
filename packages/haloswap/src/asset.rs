@@ -2,10 +2,13 @@ use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
 use std::fmt;
 
-use crate::{querier::{query_balance, query_native_decimals, query_token_balance, query_token_info}, error::ContractError};
+use crate::{
+    error::ContractError,
+    querier::{query_balance, query_native_decimals, query_token_balance, query_token_info},
+};
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, MessageInfo, QuerierWrapper,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg, Deps,
+    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
+    QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -96,7 +99,11 @@ impl Asset {
         })
     }
 
-    pub fn assert_asset_info(deps: Deps ,asset_infos: &[AssetInfoRaw], pools: &[Asset]) -> Result<(), ContractError> {
+    pub fn assert_asset_info(
+        deps: Deps,
+        asset_infos: &[AssetInfoRaw],
+        pools: &[Asset],
+    ) -> Result<(), ContractError> {
         for pool in pools.iter() {
             let mut is_valid = false;
             for asset_info in asset_infos.iter() {
@@ -106,7 +113,7 @@ impl Asset {
                 }
             }
             if !is_valid {
-                return Err(ContractError::AssetMismatch { });
+                return Err(ContractError::AssetMismatch {});
             }
         }
         Ok(())

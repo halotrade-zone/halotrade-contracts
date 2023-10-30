@@ -1,6 +1,9 @@
-use cosmwasm_std::{QuerierWrapper, Addr, StdResult, QueryRequest, WasmQuery, to_binary};
-use haloswap::{asset::{Asset, AssetInfo}, pair::SimulationResponse};
 use crate::msg::QueryMsg as StablePoolQueryMsg;
+use cosmwasm_std::{to_binary, Addr, QuerierWrapper, QueryRequest, StdResult, WasmQuery};
+use haloswap::{
+    asset::{Asset, AssetInfo},
+    pair::SimulationResponse,
+};
 
 pub fn stable_simulate(
     querier: &QuerierWrapper,

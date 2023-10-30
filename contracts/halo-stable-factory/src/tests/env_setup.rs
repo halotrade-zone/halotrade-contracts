@@ -1,25 +1,30 @@
 #[cfg(test)]
 pub mod env {
-    use cosmwasm_std::{Addr, Coin, Uint128, Empty};
+    use cosmwasm_std::{Addr, Coin, Empty, Uint128};
     use cw20::MinterResponse;
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
     use crate::contract::{
-        execute as HaloStableFactoryExecute, instantiate as HaloStableFactoryInstantiate, query as HaloStableFactoryQuery,
-        reply as HaloStableFactoryReply,
+        execute as HaloStableFactoryExecute, instantiate as HaloStableFactoryInstantiate,
+        query as HaloStableFactoryQuery, reply as HaloStableFactoryReply,
     };
 
     use halo_stable_pool::contract::{
-        execute as HaloStablePoolExecute, instantiate as HaloStablePoolInstantiate, query as HaloStablePoolQuery,
-        reply as HaloStablePoolReply,
+        execute as HaloStablePoolExecute, instantiate as HaloStablePoolInstantiate,
+        query as HaloStablePoolQuery, reply as HaloStablePoolReply,
     };
 
     use cw20_base::contract::{
         execute as HaloTokenExecute, instantiate as HaloTokenInstantiate, query as HaloTokenQuery,
     };
 
-    use crate::msg::{InstantiateMsg as HaloStableFactoryInstantiateMsg, ExecuteMsg as HaloStableFactoryExecuteMsg};
-    use halo_stable_pool::msg::{InstantiateMsg as HaloStablePoolInstantiateMsg, ExecuteMsg as HaloStablePoolExecuteMsg};
+    use crate::msg::{
+        ExecuteMsg as HaloStableFactoryExecuteMsg,
+        InstantiateMsg as HaloStableFactoryInstantiateMsg,
+    };
+    use halo_stable_pool::msg::{
+        ExecuteMsg as HaloStablePoolExecuteMsg, InstantiateMsg as HaloStablePoolInstantiateMsg,
+    };
     use haloswap::token::InstantiateMsg as HaloTokenInstantiateMsg;
 
     // ****************************************
@@ -67,15 +72,22 @@ pub mod env {
     }
 
     fn halo_stable_factory_template() -> Box<dyn Contract<Empty>> {
-        let contract =
-            ContractWrapper::new(HaloStableFactoryExecute, HaloStableFactoryInstantiate, HaloStableFactoryQuery)
-                .with_reply(HaloStableFactoryReply);
+        let contract = ContractWrapper::new(
+            HaloStableFactoryExecute,
+            HaloStableFactoryInstantiate,
+            HaloStableFactoryQuery,
+        )
+        .with_reply(HaloStableFactoryReply);
         Box::new(contract)
     }
 
     fn halo_stable_pool_template() -> Box<dyn Contract<Empty>> {
-        let contract = ContractWrapper::new(HaloStablePoolExecute, HaloStablePoolInstantiate, HaloStablePoolQuery)
-            .with_reply(HaloStablePoolReply);
+        let contract = ContractWrapper::new(
+            HaloStablePoolExecute,
+            HaloStablePoolInstantiate,
+            HaloStablePoolQuery,
+        )
+        .with_reply(HaloStablePoolReply);
         Box::new(contract)
     }
 
@@ -252,6 +264,3 @@ pub mod env {
         (app, contracts)
     }
 }
-
-
-
