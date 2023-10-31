@@ -25,7 +25,7 @@ use crate::{
     msg::{Cw20StableHookMsg, ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{
         Config, StablePoolInfo, StablePoolInfoRaw, AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG,
-        STABLE_POOL_INFO,
+        STABLE_POOL_INFO, decrease_decimals, increase_decimals
     },
 };
 
@@ -273,6 +273,19 @@ pub fn provide_liquidity(
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
 
+    // Decrease decimals of the deposits and old_c_amounts to prevent overflow
+    let deposits = deposits
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(deposit, decimals)| decrease_decimals(*deposit, *decimals))
+        .collect::<Vec<Uint128>>();
+
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
+        .collect::<Vec<Uint128>>();
+
     // calculate the amount of LP token is minted to the user
     let mut share = amp_factor_info
         .compute_lp_amount_for_deposit(&deposits, &old_c_amounts, total_share, Uint128::zero())
@@ -473,11 +486,25 @@ pub fn remove_liquidity_by_token(
         .iter()
         .map(|pool| pool.amount)
         .collect::<Vec<Uint128>>();
+    // Decrease decimals of the old_c_amounts to prevent overflow
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
+        .collect::<Vec<Uint128>>();
     // Get asset amount from assets
     let assets_amount: Vec<Uint128> = assets
         .iter()
         .map(|asset| asset.amount)
         .collect::<Vec<Uint128>>();
+
+    // Decrease decimals of the assets_amount and old_c_amounts to prevent overflow
+    let assets_amount = assets_amount
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(asset_amount, decimals)| decrease_decimals(*asset_amount, *decimals))
+        .collect::<Vec<Uint128>>();
+
     // Get the amount of LP token that user will burn
     let share = amp_factor_info
         .compute_lp_amount_for_withdraw(
@@ -588,8 +615,9 @@ pub fn stable_swap(
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
     // Get amount of offer asset
     let offer_asset_amount = offer_asset.amount;
+    // Decrease decimals of the offer_asset_amount to prevent overflow
+    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pool_info.asset_decimals[offer_asset_index]);
     let mut messages: Vec<CosmosMsg> = vec![];
-
     // Get index of ask asset
     let ask_asset_index = pools
         .iter()
@@ -599,6 +627,12 @@ pub fn stable_swap(
     let old_c_amounts: Vec<Uint128> = pools
         .iter()
         .map(|pool| pool.amount)
+        .collect::<Vec<Uint128>>();
+    // Decrease decimals of the old_c_amounts to prevent overflow
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
     // Calculate the amount of assets that user will receive
@@ -611,6 +645,9 @@ pub fn stable_swap(
             Decimal256::from_str("0.003").unwrap(),
         )
         .unwrap();
+
+    // Increase decimals of the return_amount to the original decimals
+    let return_amount = increase_decimals(return_amount, stable_pool_info.asset_decimals[ask_asset_index]);
 
     let return_asset = Asset {
         info: pools[ask_asset_index].info.clone(),
@@ -690,6 +727,8 @@ pub fn query_stable_simulation(
 
     // Get offer asset amount
     let offer_asset_amount = offer_asset.amount;
+    // Decrease decimals of the offer_asset_amount to prevent overflow
+    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pool_info.asset_decimals[offer_asset_index]);
 
     // Get ask asset index
     let ask_asset_index = pools
@@ -702,6 +741,12 @@ pub fn query_stable_simulation(
         .iter()
         .map(|pool| pool.amount)
         .collect::<Vec<Uint128>>();
+    // Decrease decimals of the old_c_amounts to prevent overflow
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
+        .collect::<Vec<Uint128>>();
 
     // Calculate the amount of assets that user will receive
     let return_amount: Uint128 = amp_factor_info
@@ -713,6 +758,8 @@ pub fn query_stable_simulation(
             commission_rate,
         )
         .unwrap();
+    // Increase decimals of the return_amount to the original decimals
+    let return_amount = increase_decimals(return_amount, stable_pool_info.asset_decimals[ask_asset_index]);
 
     let return_asset = Asset {
         info: pools[ask_asset_index].info.clone(),
@@ -749,11 +796,23 @@ pub fn query_provide_liquidity_simulation(
                 .expect("Wrong asset info is given")
         })
         .collect();
+    // Decrease decimals of the deposits to prevent overflow
+    let deposits = deposits
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(deposit, decimals)| decrease_decimals(*deposit, *decimals))
+        .collect::<Vec<Uint128>>();
 
     // get current total amount of assets in the stable pool
     let old_c_amounts: Vec<Uint128> = pools
         .iter()
         .map(|pool| pool.amount)
+        .collect::<Vec<Uint128>>();
+    // Decrease decimals of the old_c_amounts to prevent overflow
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
     // get the address of the LP token
@@ -809,6 +868,12 @@ pub fn query_remove_liquidity_by_share_simulation(
         })
         .collect::<StdResult<Vec<Uint128>>>()?;
 
+    // Increase decimals of the assets_amount back to the original decimals
+    let assets_amount = assets_amount
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(asset_amount, decimals)| increase_decimals(*asset_amount, *decimals))
+        .collect::<Vec<Uint128>>();
     Ok(assets_amount)
 }
 
@@ -836,10 +901,22 @@ pub fn query_remove_liquidity_by_token_simulation(
         .iter()
         .map(|pool| pool.amount)
         .collect::<Vec<Uint128>>();
+    // Decrease decimals of the old_c_amounts to prevent overflow
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
+        .collect::<Vec<Uint128>>();
     // Get asset amount from assets
     let assets_amount: Vec<Uint128> = assets
         .iter()
         .map(|asset| asset.amount)
+        .collect::<Vec<Uint128>>();
+    // Decrease decimals of the assets_amount to prevent overflow
+    let assets_amount = assets_amount
+        .iter()
+        .zip(stable_pool_info.asset_decimals.iter())
+        .map(|(asset_amount, decimals)| decrease_decimals(*asset_amount, *decimals))
         .collect::<Vec<Uint128>>();
     // Get the amount of LP token that user will burn
     let share = amp_factor_info

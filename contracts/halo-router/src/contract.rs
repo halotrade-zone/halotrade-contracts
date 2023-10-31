@@ -389,10 +389,11 @@ fn reverse_simulate_swap_operations(
                 )
                 .unwrap()
             }
+            // StableSwap is not supported
             SwapOperation::StableSwap {
-                offer_asset_info,
-                ask_asset_info,
-                asset_infos,
+                offer_asset_info: _,
+                ask_asset_info: _,
+                asset_infos: _,
             } => Uint128::zero(),
         }
     }

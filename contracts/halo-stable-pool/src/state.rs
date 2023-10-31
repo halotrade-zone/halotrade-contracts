@@ -90,3 +90,19 @@ pub struct CreateStablePoolRequirements {
     pub whitelist: Vec<Addr>,
     pub asset_minimum: Vec<Uint128>,
 }
+
+pub fn decrease_decimals(amount: Uint128, decimals: u8) -> Uint128 {
+    let mut amount = amount;
+    for _ in 0..decimals - 6 {
+        amount /= Uint128::from(10u128);
+    }
+    amount
+}
+
+pub fn increase_decimals(amount: Uint128, decimals: u8) -> Uint128 {
+    let mut amount = amount;
+    for _ in 0..decimals - 6 {
+        amount *= Uint128::from(10u128);
+    }
+    amount
+}

@@ -30,9 +30,6 @@ mod tests {
     // Mock information for native token
     const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
     const MOCK_TRANSACTION_FEE: u128 = 5000;
-    // Decimal macros
-    const DECIMAL_FRACTIONAL_6: u128 = 1_000_000u128;
-    const DECIMAL_FRACTIONAL_18: u128 = 1_000_000_000_000_000_000u128;
 
     mod execute_interacting_with_stable_swap {
         use cosmwasm_std::{Querier, WasmQuery};
@@ -70,7 +67,7 @@ mod tests {
         // Create a pool NATIVE, USDC
         // Provide liquidity to the pool (10000 NATIVE, 5000 USDC)
         // ADMIN swap 100 NATIVE to USDT
-        // -> ADMIN should get 50 USDT
+        // -> ADMIN should get approximately 50 USDT
         #[test]
         fn test_swap_with_rounter() {
             // get integration test app and contracts
@@ -293,19 +290,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_6),
+                        amount: Uint128::from(1u128 * DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_6),
+                        amount: Uint128::from(1u128 * DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_6),
+                        amount: Uint128::from(1u128 * DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -351,19 +348,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(10_000u128 * DECIMAL_6),
+                        amount: Uint128::from(10_000u128 * DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(20_000u128 * DECIMAL_6),
+                        amount: Uint128::from(20_000u128 * DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(30_000u128 * DECIMAL_6),
+                        amount: Uint128::from(30_000u128 * DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -487,7 +484,7 @@ mod tests {
             // increase allowance for pool contract for classic pool
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: create_classic_pool_response.contract_addr.clone(),
-                amount: Uint128::from(10_000u128 * DECIMAL_6),
+                amount: Uint128::from(10_000u128 * DECIMAL_18),
                 expires: None,
             };
 
@@ -508,13 +505,13 @@ mod tests {
                         info: AssetInfo::NativeToken {
                             denom: NATIVE_DENOM_2.to_string(),
                         },
-                        amount: Uint128::from(5_000u128 * DECIMAL_6),
+                        amount: Uint128::from(10_000u128 * DECIMAL_6),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(5_000u128 * DECIMAL_6),
+                        amount: Uint128::from(5_000u128 * DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -527,10 +524,11 @@ mod tests {
                 Addr::unchecked(create_classic_pool_response.contract_addr.to_string()),
                 &provide_liquidity_msg,
                 &[Coin {
-                    amount: Uint128::from(5_000u128 * DECIMAL_6),
+                    amount: Uint128::from(10_000u128 * DECIMAL_6),
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
+
 
             assert!(response.is_ok());
 
@@ -549,7 +547,7 @@ mod tests {
             // Assert balance of ADMIN in USDT before swap
             assert_eq!(
                 usdt_balance_before_swap.balance,
-                Uint128::from(999_999_999_999_999_979_999_000_000u128),
+                Uint128::from(999_979_999_000_000_000_000_000_000u128),
             );
 
             // query balance of ADMIN in NATIVE_DENOM_2 before swap
@@ -563,7 +561,7 @@ mod tests {
             // Assert balance of ADMIN in NATIVE_DENOM_2 before swap
             assert_eq!(
                 denom_2_balance_before_swap.amount.amount,
-                Uint128::from(494999960000u128), //494999960000
+                Uint128::from(489999960000u128), //489999960000
             );
 
             // Swap 100 NATIVE to USDT via router with operation HaloSwap(AURA -> USDC) and HaloSwap(USDC -> USDT)
@@ -644,7 +642,7 @@ mod tests {
             // Assert balance of ADMIN in USDT after swap
             assert_eq!(
                 usdt_balance_after_swap.balance,
-                usdt_balance_before_swap.balance + Uint128::from(94172249u128),
+                usdt_balance_before_swap.balance + Uint128::from(47_547_768_000_000_000_000u128), // approximately 50 USDT
             );
         }
     }
