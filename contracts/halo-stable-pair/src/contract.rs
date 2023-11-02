@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bignumber::Decimal256;
+use bignumber::{Decimal256, Uint256};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -10,6 +10,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
+use halo_pair::assert::assert_max_spread;
 use haloswap::{
     asset::{Asset, AssetInfo, AssetInfoRaw, LP_TOKEN_RESERVED_AMOUNT},
     error::ContractError,
@@ -599,7 +600,6 @@ pub fn stable_swap(
     to: Option<Addr>,
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
-
     // Get stable pair info
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
@@ -613,9 +613,9 @@ pub fn stable_swap(
         .position(|pair| pair.info == offer_asset.info)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
     // Get amount of offer asset
-    let offer_asset_amount = offer_asset.amount;
+    let offer_asset_amount: Uint128 = offer_asset.amount;
     // Decrease decimals of the offer_asset_amount to prevent overflow
-    let offer_asset_amount = decrease_decimals(
+    let offer_asset_amount: Uint128 = decrease_decimals(
         offer_asset_amount,
         stable_pair_info.asset_decimals[offer_asset_index],
     );
@@ -626,12 +626,19 @@ pub fn stable_swap(
         .position(|pair| pair.info == ask_asset)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
     // Get the amount of assets in the stable pair
-    let old_c_amounts: Vec<Uint128> = pairs
+    let mut old_c_amounts: Vec<Uint128> = pairs
         .iter()
         .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
+    // If the offer asset balance is already increased, we should subtract that amount of offer asset from the old_c_amounts
+    old_c_amounts[offer_asset_index] = old_c_amounts[offer_asset_index]
+        .checked_sub(offer_asset.amount)
+        .unwrap();
+
+    let ask_pool: Uint128 = old_c_amounts[ask_asset_index];
+    let offer_pool: Uint128 = old_c_amounts[offer_asset_index];
     // Decrease decimals of the old_c_amounts to prevent overflow
-    let old_c_amounts = old_c_amounts
+    old_c_amounts = old_c_amounts
         .iter()
         .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
@@ -658,6 +665,27 @@ pub fn stable_swap(
         info: pairs[ask_asset_index].info.clone(),
         amount: return_amount,
     };
+    // Need to implement max spread
+    // println!("ask_pool: {:?}", ask_pool);
+    // println!("offer_asset.amount: {:?}", offer_asset.amount);
+    // println!("ask_pool * offer_asset.amount: {:?}", Uint256::from(ask_pool) * Uint256::from(offer_asset.amount));
+    // println!("offer_pool: {:?}", offer_pool);
+    // println!("return_amount: {:?}", return_amount);
+    // let spread_amount: Uint256 = (Decimal256::from_ratio(Uint256::from(ask_pool) * Uint256::from(offer_asset.amount), Uint256::from(offer_pool))
+    //     * Uint256::one())
+    //     - return_amount.into();
+    // println!("Done");
+
+    // // check max spread limit if exists
+    // assert_max_spread(
+    //     belief_price,
+    //     max_spread,
+    //     offer_asset.clone(),
+    //     return_asset.clone(),
+    //     spread_amount.into(),
+    //     stable_pair_info.asset_decimals[offer_asset_index],
+    //     stable_pair_info.asset_decimals[ask_asset_index],
+    // )?;
 
     let receiver = to.unwrap_or_else(|| sender.clone());
 

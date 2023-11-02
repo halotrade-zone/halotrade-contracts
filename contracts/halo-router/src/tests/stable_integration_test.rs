@@ -624,7 +624,7 @@ mod tests {
             // Assert balance of ADMIN in USDT after swap
             assert_eq!(
                 usdt_balance_after_swap.balance,
-                usdt_balance_before_swap.balance + Uint128::from(47_547_768_000_000_000_000u128), // approximately 50 USDT
+                usdt_balance_before_swap.balance + Uint128::from(47_547_806_000_000_000_000u128), // approximately 50 USDT
             );
         }
     }

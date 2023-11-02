@@ -476,7 +476,7 @@ pub fn swap(
         amount: return_amount,
     };
 
-    // check max spread limit if exist
+    // check max spread limit if exists
     assert_max_spread(
         belief_price,
         max_spread,

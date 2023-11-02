@@ -26,6 +26,7 @@ library = []
 bignumber           = { workspace = true }
 haloswap            = { workspace = true }
 halo-factory        = { workspace = true }
+halo-pair           = { workspace = true }
 cw-utils            = { workspace = true }
 cw-storage-plus     = { workspace = true }
 cw2                 = { workspace = true }

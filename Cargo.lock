@@ -624,6 +624,7 @@ dependencies = [
  "cw20",
  "getrandom",
  "halo-factory",
+ "halo-pair",
  "haloswap",
  "schemars",
  "serde",

@@ -1196,7 +1196,7 @@ mod tests {
                         - 1 * DECIMAL_18
                         - 100_000u128 * DECIMAL_18
                         - 1 * DECIMAL_18
-                        + 99_994_630_000_000_000_000u128
+                        + 99_994_634_000_000_000_000u128
                 ), // 100 USDC received from the stable pair
             );
 
@@ -1252,7 +1252,7 @@ mod tests {
                         - 1 * DECIMAL_18
                         - 100_000u128 * DECIMAL_18
                         - 1 * DECIMAL_18
-                        + 99_994_630_000_000_000_000u128
+                        + 99_994_634_000_000_000_000u128
                         - 50_000 * DECIMAL_18
                 ), // 50_000 USDC transferred to the stable pair
             );
@@ -1275,7 +1275,7 @@ mod tests {
                     MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
                         + 1_000_053_000_000_000_000u128
                         - 9 * DECIMAL_18
-                        + 50_000_001_866_000_000_000_000u128
+                        + 50_001_194_511_000_000_000_000u128
                 ), // 50_000 USDT received from the stable pair
             );
 
@@ -1370,7 +1370,7 @@ mod tests {
                         - 1 * DECIMAL_18
                         - 100_000u128 * DECIMAL_18
                         - 1 * DECIMAL_18
-                        + 99_994_630_000_000_000_000u128
+                        + 99_994_634_000_000_000_000u128
                         - 50_000 * DECIMAL_18
                         - 100_000_000u128 * DECIMAL_18
                         - 10_000_000 * DECIMAL_18
@@ -1389,6 +1389,7 @@ mod tests {
                 .unwrap();
 
             // assert BUSD Balance of ADMIN after swap
+            println!("Xin chao: {}", 809800311317232000000000000u128 - 799799907999999000000000000);
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
@@ -1396,8 +1397,8 @@ mod tests {
                         + 8_999_999_000_000_000_000u128
                         - 100 * DECIMAL_18
                         - 200_000_000u128 * DECIMAL_18
-                        + 10_000_326_281_165_000_000_000_000u128
-                ), // 10_000_000 BUSD received from the stable pair
+                        + 10_000_403_317_233_000_000_000_000u128 // 10_000_000 BUSD received from the stable pair
+                ),
             );
         }
     }
