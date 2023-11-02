@@ -9,7 +9,7 @@ use haloswap::{
 
 use crate::{
     math::AmpFactor,
-    state::{CreateStablePoolRequirements, StablePoolInfo},
+    state::{CreateStablePairRequirements, StablePairInfo},
 };
 
 #[cw_serde]
@@ -20,12 +20,12 @@ pub struct InstantiateMsg {
     pub token_code_id: u64,
     pub asset_decimals: Vec<u8>,
     /// The requiments to the first time provide liquidity
-    pub requirements: CreateStablePoolRequirements,
+    pub requirements: CreateStablePairRequirements,
     /// Commission rate for the pair
     pub commission_rate: Decimal256,
     /// lp token info
     pub lp_token_info: LPTokenInfo,
-    /// Amplification coefficient for the pool
+    /// Amplification coefficient for the pair
     pub amp_factor_info: AmpFactor,
 }
 
@@ -68,8 +68,8 @@ pub enum Cw20StableHookMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(StablePoolInfo)]
-    StablePool {},
+    #[returns(StablePairInfo)]
+    StablePair {},
     #[returns(SimulationResponse)]
     StableSimulation {
         offer_asset: Asset,

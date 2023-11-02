@@ -24,7 +24,7 @@ library = []
 
 [dependencies]
 haloswap          = { workspace = true }
-halo-stable-pool  = { workspace = true }
+halo-stable-pair  = { workspace = true }
 bignumber         = { workspace = true }
 cw-utils          = { workspace = true }
 cw-storage-plus   = { workspace = true }

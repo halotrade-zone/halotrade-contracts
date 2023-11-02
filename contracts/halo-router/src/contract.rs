@@ -9,9 +9,9 @@ use cosmwasm_std::{
     MessageInfo, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
-use halo_stable_factory::query::query_stable_pool_info;
-use halo_stable_pool::querier::stable_simulate;
-use halo_stable_pool::state::StablePoolInfo;
+use halo_stable_factory::query::query_stable_pair_info;
+use halo_stable_pair::querier::stable_simulate;
+use halo_stable_pair::state::StablePairInfo;
 
 use crate::assert::{assert_minium_receive, assert_operations};
 use crate::operations::execute_swap_operation;
@@ -337,12 +337,12 @@ fn simulate_swap_operations(
                 ask_asset_info,
                 asset_infos,
             } => {
-                let stable_pool_info: StablePoolInfo =
-                    query_stable_pool_info(&deps.querier, halo_factory.clone(), &asset_infos)?;
+                let stable_pair_info: StablePairInfo =
+                    query_stable_pair_info(&deps.querier, halo_factory.clone(), &asset_infos)?;
 
                 let res: SimulationResponse = stable_simulate(
                     &deps.querier,
-                    Addr::unchecked(stable_pool_info.contract_addr),
+                    Addr::unchecked(stable_pair_info.contract_addr),
                     &Asset {
                         info: offer_asset_info,
                         amount: offer_amount,

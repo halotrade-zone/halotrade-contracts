@@ -1,31 +1,31 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use halo_stable_pool::{
+use halo_stable_pair::{
     math::AmpFactor,
-    state::{CreateStablePoolRequirements, StablePoolInfo},
+    state::{CreateStablePairRequirements, StablePairInfo},
 };
 use haloswap::asset::{AssetInfo, LPTokenInfo};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Stable Pool contract code ID, which is used to
-    pub stable_pool_code_id: u64,
+    /// Stable Pair contract code ID, which is used to
+    pub stable_pair_code_id: u64,
     pub token_code_id: u64,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Create Stable Pool
-    CreateStablePool {
+    /// Create Stable Pair
+    CreateStablePair {
         /// Stable asset infos
         asset_infos: Vec<AssetInfo>,
         /// The requiments to create a pair
-        requirements: CreateStablePoolRequirements,
+        requirements: CreateStablePairRequirements,
         /// Commission rate for the pair
         commission_rate: Option<Decimal256>,
         /// LP token info
         lp_token_info: LPTokenInfo,
-        /// Amplification coefficient for the pool
+        /// Amplification coefficient for the pair
         amp_factor_info: AmpFactor,
     },
 }
@@ -35,14 +35,14 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(ConfigResponse)]
     Config {},
-    #[returns(StablePoolInfo)]
-    StablePool { asset_infos: Vec<AssetInfo> },
+    #[returns(StablePairInfo)]
+    StablePair { asset_infos: Vec<AssetInfo> },
 }
 
 // We define a custom struct for each query response
 #[cw_serde]
 pub struct ConfigResponse {
     pub owner: String,
-    pub stable_pool_code_id: u64,
+    pub stable_pair_code_id: u64,
     pub token_code_id: u64,
 }

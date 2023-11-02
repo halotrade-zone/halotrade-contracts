@@ -129,11 +129,11 @@ impl AmpFactor {
     pub fn compute_lp_amount_for_deposit(
         &self,
         deposit_c_amounts: &Vec<Uint128>, // deposit tokens in comparable precision
-        old_c_amounts: &Vec<Uint128>,     // current in-pool tokens in comparable precision
-        pool_token_supply: Uint128,       // current share supply
+        old_c_amounts: &Vec<Uint128>,     // current in-pair tokens in comparable precision
+        pair_token_supply: Uint128,       // current share supply
         _fees: Uint128,                   // fees in decimal
     ) -> Option<(Uint128, Uint128)> {
-        if pool_token_supply.is_zero() {
+        if pair_token_supply.is_zero() {
             let invariant = self.compute_d(deposit_c_amounts)? * Uint256::one();
             return Some((invariant.into(), Uint128::zero()));
         } else {
@@ -152,23 +152,23 @@ impl AmpFactor {
                 return None;
             } else {
                 // Recalculate the invariant accounting for fees
-                for i in 0..new_balances.len() {
-                    let ideal_balance =
-                        d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
-                    let difference = if ideal_balance
-                        > Decimal256::from_uint256(Uint256::from(new_balances[i]))
-                    {
-                        ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
-                    } else {
-                        Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
-                    };
+                // for i in 0..new_balances.len() {
+                //     let ideal_balance =
+                //         d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
+                    // let difference = if ideal_balance
+                    //     > Decimal256::from_uint256(Uint256::from(new_balances[i]))
+                    // {
+                    //     ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
+                    // } else {
+                    //     Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
+                    // };
                     // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
                     // new_balances[i] = new_balances[i] - fee;
-                }
+                // }
 
                 let d_2 = self.compute_d(&new_balances)?;
                 let mints_shares: Uint256 =
-                    (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_2 - d_0)
+                    (Decimal256::from_uint256(Uint256::from(pair_token_supply)) * (d_2 - d_0)
                         / d_0)
                         * Uint256::one();
 
@@ -178,13 +178,13 @@ impl AmpFactor {
     }
 
     /// Compute the amount of LP tokens to burn after withdrawing liquidity
-    /// given token_out user want get and total tokens in pool and lp token supply
+    /// given token_out user want get and total tokens in pair and lp token supply
     /// all amounts are in comparable precision
     pub fn compute_lp_amount_for_withdraw(
         &self,
         withdraw_c_amounts: &Vec<Uint128>, // withdraw tokens in comparable precision
-        old_c_amounts: &Vec<Uint128>,      // current in-pool tokens in comparable precision
-        pool_token_supply: Uint128,        // current share supply
+        old_c_amounts: &Vec<Uint128>,      // current in-pair tokens in comparable precision
+        pair_token_supply: Uint128,        // current share supply
         _fees: Uint128,                    // fees in decimal
     ) -> Option<(Uint128, Uint128)> {
         let n_coins = old_c_amounts.len();
@@ -204,18 +204,18 @@ impl AmpFactor {
             None
         } else {
             // Recalculate the invariant accounting for fees
-            for i in 0..new_balances.len() {
-                let ideal_balance =
-                    d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
-                let difference =
-                    if ideal_balance > Decimal256::from_uint256(Uint256::from(new_balances[i])) {
-                        ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
-                    } else {
-                        Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
-                    };
-                // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
-                // new_balances[i] = new_balances[i] - fee;
-            }
+            // for i in 0..new_balances.len() {
+            //     let ideal_balance =
+            //         d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
+            //     let difference =
+            //         if ideal_balance > Decimal256::from_uint256(Uint256::from(new_balances[i])) {
+            //             ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
+            //         } else {
+            //             Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
+            //         };
+            //     // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
+            //     // new_balances[i] = new_balances[i] - fee;
+            // }
 
             let d_2 = self.compute_d(&new_balances)?;
 
@@ -225,10 +225,10 @@ impl AmpFactor {
             // (d1 - d2) => fee part,
             // burn_shares = diff_shares + fee part
             let burn_shares: Uint256 =
-                (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_0 - d_2) / d_0)
+                (Decimal256::from_uint256(Uint256::from(pair_token_supply)) * (d_0 - d_2) / d_0)
                     * Uint256::one();
             let diff_shares: Uint256 =
-                (Decimal256::from_uint256(Uint256::from(pool_token_supply)) * (d_0 - d_1) / d_0)
+                (Decimal256::from_uint256(Uint256::from(pair_token_supply)) * (d_0 - d_1) / d_0)
                     * Uint256::one();
 
             Some((burn_shares.into(), (burn_shares - diff_shares).into()))
@@ -240,7 +240,7 @@ impl AmpFactor {
     pub fn compute_y(
         &self,
         x_c_amount: Uint128, // new x_token amount in comparable precision,
-        current_c_amounts: &Vec<Uint128>, // current in-pool tokens in comparable precision
+        current_c_amounts: &Vec<Uint128>, // current in-pair tokens in comparable precision
         index_x: usize,      // index of x_token
         index_y: usize,      // index of y_token
     ) -> Option<Decimal256> {
@@ -294,7 +294,7 @@ impl AmpFactor {
         token_in_idx: usize,              // index of token in token vector
         token_in_amount: Uint128,         // amount of token in comparable precision
         token_out_idx: usize,             // index of token out token vector
-        current_c_amounts: &Vec<Uint128>, // current in-pool tokens in comparable precision
+        current_c_amounts: &Vec<Uint128>, // current in-pair tokens in comparable precision
         _swap_fee: Decimal256,            // swap fee in decimal
     ) -> Option<Uint128> {
         let y: Uint256 = self

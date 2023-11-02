@@ -24,13 +24,13 @@ mod tests {
         use cosmwasm_std::{to_binary, Addr, Coin, Uint128};
         use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
         use cw_multi_test::Executor;
-        use halo_stable_pool::msg::{
-            ExecuteMsg as StablePoolExecuteMsg, QueryMsg as StablePoolQueryMsg,
+        use halo_stable_pair::msg::{
+            ExecuteMsg as StablePairExecuteMsg, QueryMsg as StablePairQueryMsg,
         };
-        use halo_stable_pool::{
+        use halo_stable_pair::{
             math::AmpFactor,
             msg::Cw20StableHookMsg,
-            state::{CreateStablePoolRequirements, StablePoolInfo},
+            state::{CreateStablePairRequirements, StablePairInfo},
         };
         use haloswap::asset::{Asset, AssetInfo, CreatePairRequirements, LPTokenInfo};
         use haloswap::factory::{
@@ -39,15 +39,15 @@ mod tests {
         };
 
         use super::*;
-        // Create a stable swap pool with 3 tokens USDC, USDT, BUSD
-        // Provide liquidity to the pool (1 USDC, 1 USDT, 1 BUSD)
-        // Provide liquidity to the pool one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
-        // Remove liquidity by Share from the pool by 50% of Share (250_000 LP Token)
+        // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
+        // Provide liquidity to the pair (1 USDC, 1 USDT, 1 BUSD)
+        // Provide liquidity to the pair one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+        // Remove liquidity by Share from the pair by 50% of Share (250_000 LP Token)
         // -> ADMIN should get (50_000.5 USDC, 100_000.5 USDT, 100_000.5 BUSD)
-        // Remove liquidity by Token from the pool by 25_000 USDC, 50_000 USDT, 50_000 BUSD
+        // Remove liquidity by Token from the pair by 25_000 USDC, 50_000 USDT, 50_000 BUSD
         // -> ADMIN should get (25_000 USDC, 50_000 USDT, 50_000 BUSD) and burn 125_000 LP Token
         #[test]
-        fn test_add_liquidity_pool_3_tokens() {
+        fn test_add_liquidity_pair_3_tokens() {
             // get integration test app and contracts
             let (mut app, contracts) = instantiate_contracts();
             // get the stable factory contract
@@ -119,7 +119,7 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // create stable pool USDC, USDT, BUSD
+            // create stable pair USDC, USDT, BUSD
             let asset_infos = vec![
                 AssetInfo::Token {
                     contract_addr: usdc_token_contract.clone(),
@@ -132,10 +132,10 @@ mod tests {
                 },
             ];
 
-            // create stable pool msg
-            let create_stable_pool_msg = StableFactoryExecuteMsg::CreateStablePool {
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
                 asset_infos,
-                requirements: CreateStablePoolRequirements {
+                requirements: CreateStablePairRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
                     asset_minimum: vec![
                         Uint128::from(1u128),
@@ -158,11 +158,11 @@ mod tests {
                 },
             };
 
-            // Execute create stable pool
+            // Execute create stable pair
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked(stable_factory_contract.clone()),
-                &create_stable_pool_msg,
+                &create_stable_pair_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
                     denom: NATIVE_DENOM_2.to_string(),
@@ -171,12 +171,12 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // query stable pool info
-            let response: StablePoolInfo = app
+            // query stable pair info
+            let response: StablePairInfo = app
                 .wrap()
                 .query_wasm_smart(
                     Addr::unchecked(stable_factory_contract.clone()),
-                    &StableFactoryQueryMsg::StablePool {
+                    &StableFactoryQueryMsg::StablePair {
                         asset_infos: vec![
                             AssetInfo::Token {
                                 contract_addr: usdc_token_contract.clone(),
@@ -192,10 +192,10 @@ mod tests {
                 )
                 .unwrap();
 
-            // Assert stable pool info
+            // Assert stable pair info
             assert_eq!(
                 response,
-                StablePoolInfo {
+                StablePairInfo {
                     contract_addr: "contract5".to_string(),
                     liquidity_token: "contract6".to_string(),
                     asset_infos: vec![
@@ -210,7 +210,7 @@ mod tests {
                         },
                     ],
                     asset_decimals: vec![18, 18, 18],
-                    requirements: CreateStablePoolRequirements {
+                    requirements: CreateStablePairRequirements {
                         whitelist: vec![Addr::unchecked(ADMIN.to_string())],
                         asset_minimum: vec![
                             Uint128::from(1u128),
@@ -222,7 +222,7 @@ mod tests {
                 }
             );
 
-            // increase allowance for stable pool contract
+            // increase allowance for stable pair contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: response.contract_addr.clone(),
                 amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
@@ -259,8 +259,8 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // provide liquidity to the pool
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            // provide liquidity to the pair
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -317,8 +317,8 @@ mod tests {
                 }
             );
 
-            // provide liquidity to the pool one more time
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            // provide liquidity to the pair one more time
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -375,7 +375,7 @@ mod tests {
                 }
             );
 
-            // Increase allowance of LP Token for stable pool contract
+            // Increase allowance of LP Token for stable pair contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: "contract5".to_string(),
                 amount: Uint128::from(500_001_542_633u128),
@@ -392,13 +392,13 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // Withdraw liquidity by share from the pool
+            // Withdraw liquidity by share from the pair
             let withdraw_liquidity_msg = Cw20StableHookMsg::RemoveLiquidityByShare {
                 share: Uint128::from(250_000_771_316u128),
                 assets_min_amount: None,
             };
 
-            // Send withdraw liquidity msg to stable pool contract
+            // Send withdraw liquidity msg to stable pair contract
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(250_000_771_316u128),
@@ -500,8 +500,8 @@ mod tests {
                 }
             );
 
-            // Withdraw liquidity by token from the pool
-            let withdraw_liquidity_msg = StablePoolExecuteMsg::RemoveLiquidityByToken {
+            // Withdraw liquidity by token from the pair
+            let withdraw_liquidity_msg = StablePairExecuteMsg::RemoveLiquidityByToken {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -627,9 +627,9 @@ mod tests {
             );
         }
 
-        // Create a stable swap pool with 3 tokens USDC, USDT, BUSD
-        // Provide liquidity to the pool (1 USDC, 1 USDT, 1 BUSD)
-        // Provide liquidity to the pool one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+        // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
+        // Provide liquidity to the pair (1 USDC, 1 USDT, 1 BUSD)
+        // Provide liquidity to the pair one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
         // ADMIN swap 1 USDC to USDT
         // -> ADMIN should get 1 USDT
         // ADMIN swap 9 USDT to BUSD
@@ -638,7 +638,7 @@ mod tests {
         // -> ADMIN should get 100 USDC
         // ADMIN swap 50_000 USDC to USDT
         // -> ADMIN should get 50_000 USDT
-        // Provide liquidity to the pool one more time (100_000_000 USDC, 150_000_000 USDT, 200_000_000 BUSD)
+        // Provide liquidity to the pair one more time (100_000_000 USDC, 150_000_000 USDT, 200_000_000 BUSD)
         // ADMIN swap 10_000_000 USDC to BUSD
         // -> ADMIN should get 10_000_000 BUSD
 
@@ -715,7 +715,7 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // create stable pool USDC, USDT, BUSD
+            // create stable pair USDC, USDT, BUSD
             let asset_infos = vec![
                 AssetInfo::Token {
                     contract_addr: usdc_token_contract.clone(),
@@ -728,10 +728,10 @@ mod tests {
                 },
             ];
 
-            // create stable pool msg
-            let create_stable_pool_msg = StableFactoryExecuteMsg::CreateStablePool {
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
                 asset_infos,
-                requirements: CreateStablePoolRequirements {
+                requirements: CreateStablePairRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
                     asset_minimum: vec![
                         Uint128::from(1u128),
@@ -754,11 +754,11 @@ mod tests {
                 },
             };
 
-            // Execute create stable pool
+            // Execute create stable pair
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked(stable_factory_contract.clone()),
-                &create_stable_pool_msg,
+                &create_stable_pair_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
                     denom: NATIVE_DENOM_2.to_string(),
@@ -767,12 +767,12 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // query stable pool info
-            let response: StablePoolInfo = app
+            // query stable pair info
+            let response: StablePairInfo = app
                 .wrap()
                 .query_wasm_smart(
                     Addr::unchecked(stable_factory_contract.clone()),
-                    &StableFactoryQueryMsg::StablePool {
+                    &StableFactoryQueryMsg::StablePair {
                         asset_infos: vec![
                             AssetInfo::Token {
                                 contract_addr: usdc_token_contract.clone(),
@@ -788,10 +788,10 @@ mod tests {
                 )
                 .unwrap();
 
-            // Assert stable pool info
+            // Assert stable pair info
             assert_eq!(
                 response,
-                StablePoolInfo {
+                StablePairInfo {
                     contract_addr: "contract5".to_string(),
                     liquidity_token: "contract6".to_string(),
                     asset_infos: vec![
@@ -806,7 +806,7 @@ mod tests {
                         },
                     ],
                     asset_decimals: vec![18, 18, 18],
-                    requirements: CreateStablePoolRequirements {
+                    requirements: CreateStablePairRequirements {
                         whitelist: vec![Addr::unchecked(ADMIN.to_string())],
                         asset_minimum: vec![
                             Uint128::from(1u128),
@@ -818,7 +818,7 @@ mod tests {
                 }
             );
 
-            // increase allowance for stable pool contract
+            // increase allowance for stable pair contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: response.contract_addr.clone(),
                 amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
@@ -855,8 +855,8 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // provide liquidity to the pool
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            // provide liquidity to the pair
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -913,8 +913,8 @@ mod tests {
                 }
             );
 
-            // provide liquidity to the pool one more time
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            // provide liquidity to the pair one more time
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -987,7 +987,7 @@ mod tests {
             );
 
             // ADMIN swap 1 USDC to USDT
-            let swap_msg = StablePoolExecuteMsg::StableSwap {
+            let swap_msg = StablePairExecuteMsg::StableSwap {
                 offer_asset: Asset {
                     info: AssetInfo::Token {
                         contract_addr: usdc_token_contract.clone(),
@@ -1002,7 +1002,7 @@ mod tests {
                 to: None,
             };
 
-            // Send 1 USDC to stable pool contract to swap
+            // Send 1 USDC to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(1u128 * DECIMAL_18),
@@ -1038,7 +1038,7 @@ mod tests {
                         - 1 * DECIMAL_18
                         - 100_000u128 * DECIMAL_18
                         - 1 * DECIMAL_18
-                ), // 1 USDC transferred to the stable pool
+                ), // 1 USDC transferred to the stable pair
             );
 
             // Query USDT Balance of ADMIN after swap
@@ -1058,11 +1058,11 @@ mod tests {
                 Uint128::from(
                     MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
                         + 1_000_053_000_000_000_000u128
-                ), // 1 USDT received from the stable pool
+                ), // 1 USDT received from the stable pair
             );
 
             // ADMIN swap 9 USDT to BUSD
-            let swap_msg = StablePoolExecuteMsg::StableSwap {
+            let swap_msg = StablePairExecuteMsg::StableSwap {
                 offer_asset: Asset {
                     info: AssetInfo::Token {
                         contract_addr: usdt_token_contract.clone(),
@@ -1077,7 +1077,7 @@ mod tests {
                 to: None,
             };
 
-            // Send 9 USDT to stable pool contract to swap
+            // Send 9 USDT to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(9u128 * DECIMAL_18),
@@ -1112,7 +1112,7 @@ mod tests {
                     MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
                         + 1_000_053_000_000_000_000u128
                         - 9 * DECIMAL_18
-                ), // 9 USDT transferred to the stable pool
+                ), // 9 USDT transferred to the stable pair
             );
 
             // Query BUSD Balance of ADMIN after swap
@@ -1132,11 +1132,11 @@ mod tests {
                 Uint128::from(
                     MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
                         + 8_999_999_000_000_000_000u128
-                ), // 9 BUSD received from the stable pool
+                ), // 9 BUSD received from the stable pair
             );
 
             // ADMIN swap 100 BUSD to USDC
-            let swap_msg = StablePoolExecuteMsg::StableSwap {
+            let swap_msg = StablePairExecuteMsg::StableSwap {
                 offer_asset: Asset {
                     info: AssetInfo::Token {
                         contract_addr: busd_token_contract.clone(),
@@ -1151,7 +1151,7 @@ mod tests {
                 to: None,
             };
 
-            // Send 100 BUSD to stable pool contract to swap
+            // Send 100 BUSD to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(100u128 * DECIMAL_18),
@@ -1186,7 +1186,7 @@ mod tests {
                     MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
                         + 8_999_999_000_000_000_000u128
                         - 100 * DECIMAL_18
-                ), // 100 BUSD transferred to the stable pool
+                ), // 100 BUSD transferred to the stable pair
             );
 
             // Query USDC Balance of ADMIN after swap
@@ -1209,11 +1209,11 @@ mod tests {
                         - 100_000u128 * DECIMAL_18
                         - 1 * DECIMAL_18
                         + 99_994_630_000_000_000_000u128
-                ), // 100 USDC received from the stable pool
+                ), // 100 USDC received from the stable pair
             );
 
             // ADMIN swap 50_000 USDC to USDT
-            let swap_msg = StablePoolExecuteMsg::StableSwap {
+            let swap_msg = StablePairExecuteMsg::StableSwap {
                 offer_asset: Asset {
                     info: AssetInfo::Token {
                         contract_addr: usdc_token_contract.clone(),
@@ -1228,7 +1228,7 @@ mod tests {
                 to: None,
             };
 
-            // Send 50_000 USDC to stable pool contract to swap
+            // Send 50_000 USDC to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(50_000u128 * DECIMAL_18),
@@ -1266,7 +1266,7 @@ mod tests {
                         - 1 * DECIMAL_18
                         + 99_994_630_000_000_000_000u128
                         - 50_000 * DECIMAL_18
-                ), // 50_000 USDC transferred to the stable pool
+                ), // 50_000 USDC transferred to the stable pair
             );
 
             // Query USDT Balance of ADMIN after swap
@@ -1288,11 +1288,11 @@ mod tests {
                         + 1_000_053_000_000_000_000u128
                         - 9 * DECIMAL_18
                         + 50_000_001_866_000_000_000_000u128
-                ), // 50_000 USDT received from the stable pool
+                ), // 50_000 USDT received from the stable pair
             );
 
-            // provide liquidity to the pool one more time
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            // provide liquidity to the pair one more time
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -1331,7 +1331,7 @@ mod tests {
             assert!(response.is_ok());
 
             // ADMIN swap 10_000_000 USDC to BUSD
-            let swap_msg = StablePoolExecuteMsg::StableSwap {
+            let swap_msg = StablePairExecuteMsg::StableSwap {
                 offer_asset: Asset {
                     info: AssetInfo::Token {
                         contract_addr: usdc_token_contract.clone(),
@@ -1346,7 +1346,7 @@ mod tests {
                 to: None,
             };
 
-            // Send 10_000_000 USDC to stable pool contract to swap
+            // Send 10_000_000 USDC to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(10_000_000u128 * DECIMAL_18),
@@ -1386,7 +1386,7 @@ mod tests {
                         - 50_000 * DECIMAL_18
                         - 100_000_000u128 * DECIMAL_18
                         - 10_000_000 * DECIMAL_18
-                ), // 100_000_000 USDC transferred to the stable pool
+                ), // 100_000_000 USDC transferred to the stable pair
             );
 
             // Query BUSD Balance of ADMIN after swap
@@ -1409,7 +1409,7 @@ mod tests {
                         - 100 * DECIMAL_18
                         - 200_000_000u128 * DECIMAL_18
                         + 10_000_326_281_165_000_000_000_000u128
-                ), // 10_000_000 BUSD received from the stable pool
+                ), // 10_000_000 BUSD received from the stable pair
             );
         }
     }

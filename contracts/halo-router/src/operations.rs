@@ -2,9 +2,9 @@ use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
     StdResult, WasmMsg,
 };
-use halo_stable_factory::query::query_stable_pool_info;
-use halo_stable_pool::msg::ExecuteMsg as StablePoolExecuteMsg;
-use halo_stable_pool::state::StablePoolInfo;
+use halo_stable_factory::query::query_stable_pair_info;
+use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
+use halo_stable_pair::state::StablePairInfo;
 
 use crate::state::{Config, StableFactoryConfig, CONFIG, STABLE_FACTORY_CONFIG};
 
@@ -71,8 +71,8 @@ pub fn execute_swap_operation(
             let config: StableFactoryConfig = STABLE_FACTORY_CONFIG.load(deps.as_ref().storage)?;
             let stable_factory = deps.api.addr_humanize(&config.halo_stable_factory)?;
 
-            let stable_pool_info: StablePoolInfo =
-                query_stable_pool_info(&deps.querier, stable_factory, &asset_infos)?;
+            let stable_pair_info: StablePairInfo =
+                query_stable_pair_info(&deps.querier, stable_factory, &asset_infos)?;
 
             let amount = match offer_asset_info.clone() {
                 AssetInfo::NativeToken { denom } => {
@@ -92,7 +92,7 @@ pub fn execute_swap_operation(
 
             vec![asset_into_stable_swap_msg(
                 deps.as_ref(),
-                Addr::unchecked(stable_pool_info.contract_addr),
+                Addr::unchecked(stable_pair_info.contract_addr),
                 offer_asset,
                 ask_asset_info,
                 None,
@@ -144,7 +144,7 @@ pub fn asset_into_swap_msg(
 
 pub fn asset_into_stable_swap_msg(
     _deps: Deps,
-    stable_pool_contract: Addr,
+    stable_pair_contract: Addr,
     offer_asset: Asset,
     ask_asset_info: AssetInfo,
     max_spread: Option<Decimal>,
@@ -152,12 +152,12 @@ pub fn asset_into_stable_swap_msg(
 ) -> StdResult<CosmosMsg> {
     match offer_asset.info.clone() {
         AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: stable_pool_contract.to_string(),
+            contract_addr: stable_pair_contract.to_string(),
             funds: vec![Coin {
                 denom,
                 amount: offer_asset.amount,
             }],
-            msg: to_binary(&StablePoolExecuteMsg::StableSwap {
+            msg: to_binary(&StablePairExecuteMsg::StableSwap {
                 offer_asset,
                 ask_asset: ask_asset_info,
                 belief_price: None,
@@ -169,9 +169,9 @@ pub fn asset_into_stable_swap_msg(
             contract_addr,
             funds: vec![],
             msg: to_binary(&Cw20ExecuteMsg::Send {
-                contract: stable_pool_contract.to_string(),
+                contract: stable_pair_contract.to_string(),
                 amount: offer_asset.amount,
-                msg: to_binary(&StablePoolExecuteMsg::StableSwap {
+                msg: to_binary(&StablePairExecuteMsg::StableSwap {
                     offer_asset,
                     ask_asset: ask_asset_info,
                     belief_price: None,

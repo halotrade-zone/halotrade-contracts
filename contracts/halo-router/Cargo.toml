@@ -28,7 +28,7 @@ bignumber           = { workspace = true }
 halo-factory        = { workspace = true }
 halo-stable-factory = { workspace = true }
 halo-pair           = { workspace = true }
-halo-stable-pool    = { workspace = true }
+halo-stable-pair    = { workspace = true }
 cosmwasm-schema     = { workspace = true }
 cosmwasm-std        = { workspace = true }
 cosmwasm-storage    = { workspace = true }

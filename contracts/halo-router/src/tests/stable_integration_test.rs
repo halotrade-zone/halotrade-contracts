@@ -1,30 +1,23 @@
 #[cfg(test)]
 mod tests {
     use crate::tests::stable_env_setup::env::{
-        instantiate_contracts, ContractInfo, ADMIN, HALO_TOKEN_DECIMALS, HALO_TOKEN_INITIAL_SUPPLY,
-        HALO_TOKEN_NAME, HALO_TOKEN_SYMBOL, NATIVE_BALANCE, NATIVE_BALANCE_2, NATIVE_DENOM,
-        NATIVE_DENOM_2, USER_1,
-    };
+        instantiate_contracts, ADMIN, NATIVE_DENOM_2};
     use bignumber::Decimal256;
     use cosmwasm_std::{
         from_binary, to_binary, Addr, BalanceResponse as BankBalanceResponse, BankQuery, Coin,
         QueryRequest, Uint128,
     };
-    use cw20::{BalanceResponse, TokenInfoResponse};
+    use cw20::BalanceResponse;
     use cw20_base::{msg::ExecuteMsg as Cw20ExecuteMsg, msg::QueryMsg as Cw20QueryMsg};
     use halo_stable_factory::msg::{
         ExecuteMsg as StableFactoryExecuteMsg, QueryMsg as StableFactoryQueryMsg,
     };
-    use halo_stable_pool::msg::{
-        ExecuteMsg as StablePoolExecuteMsg, QueryMsg as StablePoolQueryMsg,
-    };
+    use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
     use haloswap::asset::{AssetInfo, CreatePairRequirements, PairInfo};
     use haloswap::factory::{
         ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
     };
     use haloswap::factory::{ExecuteMsg as HaloFactoryExecuteMsg, QueryMsg as HaloFactoryQueryMsg};
-    use haloswap::pair::Cw20HookMsg;
-    use haloswap::router::QueryMsg as RouterQueryMsg;
     // Mock information for CW20 token contract
     const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
     // Mock information for native token
@@ -34,9 +27,9 @@ mod tests {
     mod execute_interacting_with_stable_swap {
         use cosmwasm_std::{Querier, WasmQuery};
         use cw_multi_test::Executor;
-        use halo_stable_pool::{
+        use halo_stable_pair::{
             math::AmpFactor,
-            state::{CreateStablePoolRequirements, StablePoolInfo},
+            state::{CreateStablePairRequirements, StablePairInfo},
         };
         use haloswap::{
             asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
@@ -157,9 +150,9 @@ mod tests {
             ];
 
             // create stable pool msg
-            let create_stable_pool_msg = StableFactoryExecuteMsg::CreateStablePool {
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
                 asset_infos,
-                requirements: CreateStablePoolRequirements {
+                requirements: CreateStablePairRequirements {
                     whitelist: vec![Addr::unchecked(ADMIN.to_string())],
                     asset_minimum: vec![
                         Uint128::from(1u128),
@@ -186,7 +179,7 @@ mod tests {
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked(stable_factory_contract.clone()),
-                &create_stable_pool_msg,
+                &create_stable_pair_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
                     denom: NATIVE_DENOM_2.to_string(),
@@ -196,11 +189,11 @@ mod tests {
             assert!(response.is_ok());
 
             // query stable pool info
-            let create_stable_pool_response: StablePoolInfo = app
+            let create_stable_pair_response: StablePairInfo = app
                 .wrap()
                 .query_wasm_smart(
                     Addr::unchecked(stable_factory_contract.clone()),
-                    &StableFactoryQueryMsg::StablePool {
+                    &StableFactoryQueryMsg::StablePair {
                         asset_infos: vec![
                             AssetInfo::Token {
                                 contract_addr: usdc_token_contract.clone(),
@@ -218,10 +211,10 @@ mod tests {
 
             // Assert stable pool info
             assert_eq!(
-                create_stable_pool_response,
-                StablePoolInfo {
-                    contract_addr: create_stable_pool_response.contract_addr.clone(),
-                    liquidity_token: create_stable_pool_response.liquidity_token.clone(),
+                create_stable_pair_response,
+                StablePairInfo {
+                    contract_addr: create_stable_pair_response.contract_addr.clone(),
+                    liquidity_token: create_stable_pair_response.liquidity_token.clone(),
                     asset_infos: vec![
                         AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
@@ -234,7 +227,7 @@ mod tests {
                         },
                     ],
                     asset_decimals: vec![18, 18, 18],
-                    requirements: CreateStablePoolRequirements {
+                    requirements: CreateStablePairRequirements {
                         whitelist: vec![Addr::unchecked(ADMIN.to_string())],
                         asset_minimum: vec![
                             Uint128::from(1u128),
@@ -248,7 +241,7 @@ mod tests {
 
             // increase allowance for stable pool contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
-                spender: create_stable_pool_response.contract_addr.clone(),
+                spender: create_stable_pair_response.contract_addr.clone(),
                 amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
                 expires: None,
             };
@@ -284,7 +277,7 @@ mod tests {
             assert!(response.is_ok());
 
             // provide liquidity to the pool
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -312,7 +305,7 @@ mod tests {
             // Execute provide liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(create_stable_pool_response.contract_addr.to_string()),
+                Addr::unchecked(create_stable_pair_response.contract_addr.to_string()),
                 &provide_liquidity_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
@@ -326,7 +319,7 @@ mod tests {
             let response: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
-                    create_stable_pool_response.liquidity_token.to_string(),
+                    create_stable_pair_response.liquidity_token.to_string(),
                     &Cw20QueryMsg::Balance {
                         address: ADMIN.to_string(),
                     },
@@ -342,7 +335,7 @@ mod tests {
             );
 
             // provide liquidity to the pool one more time
-            let provide_liquidity_msg = StablePoolExecuteMsg::ProvideLiquidity {
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -370,7 +363,7 @@ mod tests {
             // Execute provide liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(create_stable_pool_response.contract_addr.to_string()),
+                Addr::unchecked(create_stable_pair_response.contract_addr.to_string()),
                 &provide_liquidity_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),

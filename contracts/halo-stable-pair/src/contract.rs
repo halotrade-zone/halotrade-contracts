@@ -1,16 +1,15 @@
-use std::{hash::SipHasher, str::FromStr};
+use std::str::FromStr;
 
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
     MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
-use halo_factory::contract;
 use haloswap::{
     asset::{Asset, AssetInfo, AssetInfoRaw, LP_TOKEN_RESERVED_AMOUNT},
     error::ContractError,
@@ -24,13 +23,13 @@ use crate::{
     math::AmpFactor,
     msg::{Cw20StableHookMsg, ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{
-        Config, StablePoolInfo, StablePoolInfoRaw, AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG,
-        STABLE_POOL_INFO, decrease_decimals, increase_decimals
+        Config, StablePairInfoRaw, AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG,
+        STABLE_PAIR_INFO, decrease_decimals, increase_decimals
     },
 };
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:halo-stable-pool";
+const CONTRACT_NAME: &str = "crates.io:halo-stable-pair";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -50,7 +49,7 @@ pub fn instantiate(
         .map(|asset_info| asset_info.to_raw(deps.api))
         .collect::<StdResult<Vec<AssetInfoRaw>>>()?;
 
-    let stable_pool_info: &StablePoolInfoRaw = &StablePoolInfoRaw {
+    let stable_pair_info: &StablePairInfoRaw = &StablePairInfoRaw {
         contract_addr: deps.api.addr_validate(env.contract.address.as_str())?,
         liquidity_token: Addr::unchecked(""),
         asset_infos,
@@ -61,7 +60,7 @@ pub fn instantiate(
 
     let amp_factor_info: &AmpFactor = &msg.amp_factor_info;
 
-    // Store factory contract address which is used to create stable pool contract
+    // Store factory contract address which is used to create stable pair contract
     CONFIG.save(
         deps.storage,
         &Config {
@@ -69,7 +68,7 @@ pub fn instantiate(
         },
     )?;
 
-    STABLE_POOL_INFO.save(deps.storage, stable_pool_info)?;
+    STABLE_PAIR_INFO.save(deps.storage, stable_pair_info)?;
 
     AMP_FACTOR_INFO.save(deps.storage, amp_factor_info)?;
 
@@ -107,7 +106,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     let liquidity_token = res.contract_address;
 
     let api = deps.api;
-    STABLE_POOL_INFO.update(deps.storage, |mut meta| -> StdResult<_> {
+    STABLE_PAIR_INFO.update(deps.storage, |mut meta| -> StdResult<_> {
         meta.liquidity_token = api.addr_validate(&liquidity_token)?;
         Ok(meta)
     })?;
@@ -140,7 +139,7 @@ pub fn execute(
             max_spread,
             to,
         } => {
-            // This message can only be called by the stable pool contract itself when the offer asset is native token
+            // This message can only be called by the stable pair contract itself when the offer asset is native token
             if !offer_asset.is_native_token() {
                 return Err(ContractError::Unauthorized {});
             }
@@ -212,34 +211,34 @@ pub fn provide_liquidity(
         asset.assert_sent_native_token_balance(&info)?;
     }
 
-    // get information of the stable pool
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // get information of the stable pair
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
-    // query the information of the stable pool of assets
-    let mut pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
-    // get the amount of assets that user deposited after checking the assets is same as the assets in stable pool
-    let deposits: Vec<Uint128> = pools
+    // query the information of the stable pair of assets
+    let mut pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+    // get the amount of assets that user deposited after checking the assets is same as the assets in stable pair
+    let deposits: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| {
+        .map(|pair| {
             assets
                 .iter()
-                .find(|asset| asset.info == pool.info)
+                .find(|asset| asset.info == pair.info)
                 .map(|asset| asset.amount)
                 .expect("Wrong asset info is given")
         })
         .collect();
 
-    // If the asset is a token, the value of pools[i] is correct. But we must take the token from the user.
-    // If the asset is a native token, the amount of native token is already sent with the message to the pool.
-    // So we must subtract that amount of native token from the pools[i].
-    // pools[] will be used to calculate the amount of LP token to mint after.
+    // If the asset is a token, the value of pairs[i] is correct. But we must take the token from the user.
+    // If the asset is a native token, the amount of native token is already sent with the message to the pair.
+    // So we must subtract that amount of native token from the pairs[i].
+    // pairs[] will be used to calculate the amount of LP token to mint after.
     let mut messages: Vec<CosmosMsg> = vec![];
-    for (i, pool) in pools.iter_mut().enumerate() {
-        // If the asset 'pool' is a token, then we need to execute TransferFrom msg to receive funds
-        // User must approve the pool contract to transfer the token before calling this function
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+    for (i, pair) in pairs.iter_mut().enumerate() {
+        // If the asset 'pair' is a token, then we need to execute TransferFrom msg to receive funds
+        // User must approve the pair contract to transfer the token before calling this function
+        if let AssetInfo::Token { contract_addr, .. } = &pair.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
@@ -250,25 +249,25 @@ pub fn provide_liquidity(
                 funds: vec![],
             }));
         } else {
-            // If the asset 'pool' is native token, balance is already increased
-            // To calculated properly we should subtract user deposit from the pool
-            pool.amount = pool.amount.checked_sub(deposits[i])?;
+            // If the asset 'pair' is native token, balance is already increased
+            // To calculated properly we should subtract user deposit from the pair
+            pair.amount = pair.amount.checked_sub(deposits[i])?;
         }
     }
 
     // if the user provides the slippage tolerance, we should check it
-    assert_stable_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
+    assert_stable_slippage_tolerance(&slippage_tolerance, &deposits, &pairs)?;
 
-    // get current total amount of assets in the stable pool
-    let old_c_amounts: Vec<Uint128> = pools
+    // get current total amount of assets in the stable pair
+    let old_c_amounts: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| pool.amount)
+        .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
 
     // get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pool_info.liquidity_token.to_string())?;
+        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
 
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
@@ -276,13 +275,13 @@ pub fn provide_liquidity(
     // Decrease decimals of the deposits and old_c_amounts to prevent overflow
     let deposits = deposits
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(deposit, decimals)| decrease_decimals(*deposit, *decimals))
         .collect::<Vec<Uint128>>();
 
     let old_c_amounts = old_c_amounts
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
@@ -307,12 +306,12 @@ pub fn provide_liquidity(
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: deps
                 .api
-                .addr_validate(&stable_pool_info.liquidity_token.to_string())?
+                .addr_validate(&stable_pair_info.liquidity_token.to_string())?
                 .to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: deps
                     .api
-                    .addr_validate(&stable_pool_info.liquidity_token.to_string())?
+                    .addr_validate(&stable_pair_info.liquidity_token.to_string())?
                     .to_string(),
                 amount: Uint128::from(LP_TOKEN_RESERVED_AMOUNT),
             })?,
@@ -327,7 +326,7 @@ pub fn provide_liquidity(
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: deps
             .api
-            .addr_validate(&stable_pool_info.liquidity_token.to_string())?
+            .addr_validate(&stable_pair_info.liquidity_token.to_string())?
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
             recipient: receiver.to_string(),
@@ -369,26 +368,26 @@ pub fn remove_liquidity_by_share(
             "Share amount is zero",
         )));
     }
-    // Get stable pool info
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get stable pair info
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get total supply of the LP token
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pool_info.liquidity_token.to_string())?,
+            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
     )?
     .total_supply;
 
-    // Get the amount of assets in the stable pool
-    let mut pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get the amount of assets in the stable pair
+    let mut pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
 
     // Get the amount of assets that user will receive after removing liquidity
-    let assets_amount: Vec<Uint128> = pools
+    let assets_amount: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| {
+        .map(|pair| {
             // Return the amount of assets that user will receive
-            Ok(pool
+            Ok(pair
                 .amount
                 .checked_mul(share)?
                 .checked_div(shares_total_supply)?)
@@ -408,10 +407,10 @@ pub fn remove_liquidity_by_share(
 
     // Send the amount of assets that user will receive to the sender
     let mut messages: Vec<CosmosMsg> = vec![];
-    for (i, pool) in pools.iter_mut().enumerate() {
-        // If the asset 'pool' is a token, then we need to execute Transfer msg to send funds
-        // If the asset 'pool' is native token, the amount of native token is already sent with the message to the pool.
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+    for (i, pair) in pairs.iter_mut().enumerate() {
+        // If the asset 'pair' is a token, then we need to execute Transfer msg to send funds
+        // If the asset 'pair' is native token, the amount of native token is already sent with the message to the pair.
+        if let AssetInfo::Token { contract_addr, .. } = &pair.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -426,7 +425,7 @@ pub fn remove_liquidity_by_share(
     // Get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pool_info.liquidity_token.to_string())?;
+        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
 
     // Burn LP token from sender
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -443,7 +442,7 @@ pub fn remove_liquidity_by_share(
             "assets",
             &format!(
                 "{}",
-                pools
+                pairs
                     .iter()
                     .map(|asset| asset.to_string())
                     .collect::<Vec<String>>()
@@ -460,36 +459,36 @@ pub fn remove_liquidity_by_token(
     assets: Vec<Asset>,
     max_burn_share: Option<Uint128>,
 ) -> Result<Response, ContractError> {
-    // Get stable pool info
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get stable pair info
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get sender's LP token balance
     let sender_share_balance = query_token_balance(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pool_info.liquidity_token.to_string())?,
+            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
         info.sender.clone(),
     )?;
     // Get total supply of the LP token
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pool_info.liquidity_token.to_string())?,
+            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
     )?
     .total_supply;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
-    // Get the amount of assets in the stable pool
-    let mut pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
-    // Get current total amount of assets in the stable pool
-    let old_c_amounts: Vec<Uint128> = pools
+    // Get the amount of assets in the stable pair
+    let mut pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get current total amount of assets in the stable pair
+    let old_c_amounts: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| pool.amount)
+        .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
     // Decrease decimals of the old_c_amounts to prevent overflow
     let old_c_amounts = old_c_amounts
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
     // Get asset amount from assets
@@ -501,7 +500,7 @@ pub fn remove_liquidity_by_token(
     // Decrease decimals of the assets_amount and old_c_amounts to prevent overflow
     let assets_amount = assets_amount
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(asset_amount, decimals)| decrease_decimals(*asset_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
@@ -532,10 +531,10 @@ pub fn remove_liquidity_by_token(
 
     // Send the amount of assets that user will receive to the sender
     let mut messages: Vec<CosmosMsg> = vec![];
-    for (i, pool) in pools.iter_mut().enumerate() {
-        // If the asset 'pool' is a token, then we need to execute Transfer msg to send funds
-        // If the asset 'pool' is native token, the amount of native token is already sent with the message to the pool.
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+    for (i, pair) in pairs.iter_mut().enumerate() {
+        // If the asset 'pair' is a token, then we need to execute Transfer msg to send funds
+        // If the asset 'pair' is native token, the amount of native token is already sent with the message to the pair.
+        if let AssetInfo::Token { contract_addr, .. } = &pair.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -550,7 +549,7 @@ pub fn remove_liquidity_by_token(
     // Get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pool_info.liquidity_token.to_string())?;
+        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
 
     // Transfer LP token from sender to contract
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -601,37 +600,37 @@ pub fn stable_swap(
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
 
-    // Get stable pool info
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
-    // Get the amount of assets in the stable pool
-    let pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get stable pair info
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
+    // Get the amount of assets in the stable pair
+    let pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get index of offer asset
-    let offer_asset_index = pools
+    let offer_asset_index = pairs
         .iter()
-        .position(|pool| pool.info == offer_asset.info)
+        .position(|pair| pair.info == offer_asset.info)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
     // Get amount of offer asset
     let offer_asset_amount = offer_asset.amount;
     // Decrease decimals of the offer_asset_amount to prevent overflow
-    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pool_info.asset_decimals[offer_asset_index]);
+    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pair_info.asset_decimals[offer_asset_index]);
     let mut messages: Vec<CosmosMsg> = vec![];
     // Get index of ask asset
-    let ask_asset_index = pools
+    let ask_asset_index = pairs
         .iter()
-        .position(|pool| pool.info == ask_asset)
+        .position(|pair| pair.info == ask_asset)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
-    // Get the amount of assets in the stable pool
-    let old_c_amounts: Vec<Uint128> = pools
+    // Get the amount of assets in the stable pair
+    let old_c_amounts: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| pool.amount)
+        .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
     // Decrease decimals of the old_c_amounts to prevent overflow
     let old_c_amounts = old_c_amounts
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
@@ -647,10 +646,10 @@ pub fn stable_swap(
         .unwrap();
 
     // Increase decimals of the return_amount to the original decimals
-    let return_amount = increase_decimals(return_amount, stable_pool_info.asset_decimals[ask_asset_index]);
+    let return_amount = increase_decimals(return_amount, stable_pair_info.asset_decimals[ask_asset_index]);
 
     let return_asset = Asset {
-        info: pools[ask_asset_index].info.clone(),
+        info: pairs[ask_asset_index].info.clone(),
         amount: return_amount,
     };
 
@@ -674,7 +673,7 @@ pub fn stable_swap(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::StablePool {} => Ok(to_binary(&query_stable_pool(deps)?)?),
+        QueryMsg::StablePair {} => Ok(to_binary(&query_stable_pair(deps)?)?),
         QueryMsg::StableSimulation {
             offer_asset,
             ask_asset,
@@ -695,10 +694,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     }
 }
 
-/// Query stable pool info
-pub fn query_stable_pool(deps: Deps) -> StdResult<StablePoolInfoRaw> {
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
-    Ok(stable_pool_info)
+/// Query stable pair info
+pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfoRaw> {
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
+    Ok(stable_pair_info)
 }
 
 pub fn query_stable_simulation(
@@ -706,45 +705,45 @@ pub fn query_stable_simulation(
     offer_asset: Asset,
     ask_asset: AssetInfo,
 ) -> Result<SimulationResponse, ContractError> {
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
 
     let contract_addr = deps
         .api
-        .addr_validate(&stable_pool_info.contract_addr.to_string())?;
-    // get pool info of the stable pool contract
-    let pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, contract_addr.clone())?;
+        .addr_validate(&stable_pair_info.contract_addr.to_string())?;
+    // get pair info of the stable pair contract
+    let pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, contract_addr.clone())?;
     // Commission rate OR Fee amount for framework
     let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
     // Get AMP factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
 
     // Get offer asset index
-    let offer_asset_index = pools
+    let offer_asset_index = pairs
         .iter()
-        .position(|pool| pool.info == offer_asset.info)
+        .position(|pair| pair.info == offer_asset.info)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
 
     // Get offer asset amount
     let offer_asset_amount = offer_asset.amount;
     // Decrease decimals of the offer_asset_amount to prevent overflow
-    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pool_info.asset_decimals[offer_asset_index]);
+    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pair_info.asset_decimals[offer_asset_index]);
 
     // Get ask asset index
-    let ask_asset_index = pools
+    let ask_asset_index = pairs
         .iter()
-        .position(|pool| pool.info == ask_asset)
+        .position(|pair| pair.info == ask_asset)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
 
-    // Get the amount of assets in the stable pool
-    let old_c_amounts: Vec<Uint128> = pools
+    // Get the amount of assets in the stable pair
+    let old_c_amounts: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| pool.amount)
+        .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
     // Decrease decimals of the old_c_amounts to prevent overflow
     let old_c_amounts = old_c_amounts
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
@@ -759,10 +758,10 @@ pub fn query_stable_simulation(
         )
         .unwrap();
     // Increase decimals of the return_amount to the original decimals
-    let return_amount = increase_decimals(return_amount, stable_pool_info.asset_decimals[ask_asset_index]);
+    let return_amount = increase_decimals(return_amount, stable_pair_info.asset_decimals[ask_asset_index]);
 
     let return_asset = Asset {
-        info: pools[ask_asset_index].info.clone(),
+        info: pairs[ask_asset_index].info.clone(),
         amount: return_amount,
     };
 
@@ -778,20 +777,20 @@ pub fn query_provide_liquidity_simulation(
     env: Env,
     assets: Vec<Asset>,
 ) -> Result<Uint128, ContractError> {
-    // get information of the stable pool
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // get information of the stable pair
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
-    // query the information of the stable pool of assets
-    let pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
-    // get the amount of assets that user deposited after checking the assets is same as the assets in stable pool
-    let deposits: Vec<Uint128> = pools
+    // query the information of the stable pair of assets
+    let pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+    // get the amount of assets that user deposited after checking the assets is same as the assets in stable pair
+    let deposits: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| {
+        .map(|pair| {
             assets
                 .iter()
-                .find(|asset| asset.info == pool.info)
+                .find(|asset| asset.info == pair.info)
                 .map(|asset| asset.amount)
                 .expect("Wrong asset info is given")
         })
@@ -799,26 +798,26 @@ pub fn query_provide_liquidity_simulation(
     // Decrease decimals of the deposits to prevent overflow
     let deposits = deposits
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(deposit, decimals)| decrease_decimals(*deposit, *decimals))
         .collect::<Vec<Uint128>>();
 
-    // get current total amount of assets in the stable pool
-    let old_c_amounts: Vec<Uint128> = pools
+    // get current total amount of assets in the stable pair
+    let old_c_amounts: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| pool.amount)
+        .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
     // Decrease decimals of the old_c_amounts to prevent overflow
     let old_c_amounts = old_c_amounts
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
     // get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pool_info.liquidity_token.to_string())?;
+        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
 
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
@@ -843,25 +842,25 @@ pub fn query_remove_liquidity_by_share_simulation(
     env: Env,
     share: Uint128,
 ) -> Result<Vec<Uint128>, ContractError> {
-    // Get stable pool info
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get stable pair info
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get total supply of the LP token
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pool_info.liquidity_token.to_string())?,
+            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
     )?
     .total_supply;
 
-    // Get the amount of assets in the stable pool
-    let pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get the amount of assets in the stable pair
+    let pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
     // Get the amount of assets that user will receive after removing liquidity
-    let assets_amount: Vec<Uint128> = pools
+    let assets_amount: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| {
+        .map(|pair| {
             // Return the amount of assets that user will receive
-            Ok(pool
+            Ok(pair
                 .amount
                 .checked_mul(share)?
                 .checked_div(shares_total_supply)?)
@@ -871,7 +870,7 @@ pub fn query_remove_liquidity_by_share_simulation(
     // Increase decimals of the assets_amount back to the original decimals
     let assets_amount = assets_amount
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(asset_amount, decimals)| increase_decimals(*asset_amount, *decimals))
         .collect::<Vec<Uint128>>();
     Ok(assets_amount)
@@ -882,29 +881,29 @@ pub fn query_remove_liquidity_by_token_simulation(
     env: Env,
     assets: Vec<Asset>,
 ) -> Result<Uint128, ContractError> {
-    // Get stable pool info
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOL_INFO.load(deps.storage)?;
+    // Get stable pair info
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get total supply of the LP token
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pool_info.liquidity_token.to_string())?,
+            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
     )?
     .total_supply;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
-    // Get the amount of assets in the stable pool
-    let pools: Vec<Asset> =
-        stable_pool_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
-    // Get current total amount of assets in the stable pool
-    let old_c_amounts: Vec<Uint128> = pools
+    // Get the amount of assets in the stable pair
+    let pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+    // Get current total amount of assets in the stable pair
+    let old_c_amounts: Vec<Uint128> = pairs
         .iter()
-        .map(|pool| pool.amount)
+        .map(|pair| pair.amount)
         .collect::<Vec<Uint128>>();
     // Decrease decimals of the old_c_amounts to prevent overflow
     let old_c_amounts = old_c_amounts
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
     // Get asset amount from assets
@@ -915,7 +914,7 @@ pub fn query_remove_liquidity_by_token_simulation(
     // Decrease decimals of the assets_amount to prevent overflow
     let assets_amount = assets_amount
         .iter()
-        .zip(stable_pool_info.asset_decimals.iter())
+        .zip(stable_pair_info.asset_decimals.iter())
         .map(|(asset_amount, decimals)| decrease_decimals(*asset_amount, *decimals))
         .collect::<Vec<Uint128>>();
     // Get the amount of LP token that user will burn

@@ -4,24 +4,24 @@ use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn,
+    to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn,
     Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use halo_stable_pool::math::AmpFactor;
-use halo_stable_pool::msg::InstantiateMsg as StablePoolInstantiateMsg;
-use halo_stable_pool::state::{
-    CreateStablePoolRequirements, StablePoolInfo, StablePoolInfoRaw, DEFAULT_COMMISSION_RATE,
+use halo_stable_pair::math::AmpFactor;
+use halo_stable_pair::msg::InstantiateMsg as StablePairInstantiateMsg;
+use halo_stable_pair::state::{
+    CreateStablePairRequirements, StablePairInfo, StablePairInfoRaw, DEFAULT_COMMISSION_RATE,
 };
 use haloswap::asset::{AssetInfo, AssetInfoRaw, LPTokenInfo};
 
 use crate::msg::{ConfigResponse, QueryMsg};
-use crate::query::query_stable_pool_info_from_stable_pools;
-use crate::state::STABLE_POOLS;
+use crate::query::query_stable_pair_info_from_stable_pairs;
+use crate::state::STABLE_PAIRS;
 use crate::{
     msg::{ExecuteMsg, InstantiateMsg},
-    state::{pair_key, Config, TmpStablePoolInfo, CONFIG, TMP_STABLE_POOL_INFO},
+    state::{pair_key, Config, TmpStablePairInfo, CONFIG, TMP_STABLE_PAIR_INFO},
 };
 
 // version info for migration info
@@ -40,7 +40,7 @@ pub fn instantiate(
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
-        stable_pool_code_id: msg.stable_pool_code_id,
+        stable_pair_code_id: msg.stable_pair_code_id,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -51,13 +51,13 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::CreateStablePool {
+        ExecuteMsg::CreateStablePair {
             asset_infos,
             requirements,
             commission_rate,
             lp_token_info,
             amp_factor_info,
-        } => execute_create_stable_pool(
+        } => execute_create_stable_pair(
             deps,
             env,
             info,
@@ -70,12 +70,12 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-pub fn execute_create_stable_pool(
+pub fn execute_create_stable_pair(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     asset_infos: Vec<AssetInfo>,
-    requirements: CreateStablePoolRequirements,
+    requirements: CreateStablePairRequirements,
     commission_rate: Option<Decimal256>,
     lp_token_info: LPTokenInfo,
     amp_factor_info: AmpFactor,
@@ -124,9 +124,9 @@ pub fn execute_create_stable_pool(
     // Get pair key
     let pair_key = pair_key(&raw_infos);
 
-    TMP_STABLE_POOL_INFO.save(
+    TMP_STABLE_PAIR_INFO.save(
         deps.storage,
-        &TmpStablePoolInfo {
+        &TmpStablePairInfo {
             pair_key,
             asset_infos: raw_infos,
             asset_decimals: asset_decimals.clone(),
@@ -134,7 +134,7 @@ pub fn execute_create_stable_pool(
     )?;
     Ok(Response::new()
         .add_attributes(vec![
-            ("action", "create_stable_pool"),
+            ("action", "create_stable_pair"),
             (
                 "stable_assets",
                 &format!(
@@ -152,11 +152,11 @@ pub fn execute_create_stable_pool(
             id: 1,
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
-                code_id: config.stable_pool_code_id,
+                code_id: config.stable_pair_code_id,
                 funds: vec![],
                 admin: Some(env.contract.address.to_string()),
-                label: "stable_pool".to_string(),
-                msg: to_binary(&StablePoolInstantiateMsg {
+                label: "stable_pair".to_string(),
+                msg: to_binary(&StablePairInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
                     asset_decimals,
@@ -178,33 +178,33 @@ pub fn execute_create_stable_pool(
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
-    let tmp_stable_pool_info = TMP_STABLE_POOL_INFO.load(deps.storage)?;
+    let tmp_stable_pair_info = TMP_STABLE_PAIR_INFO.load(deps.storage)?;
 
     let reply = parse_reply_instantiate_data(msg).unwrap();
 
-    let stable_pool_contract = &reply.contract_address;
-    let stable_pool_info = query_stable_pool_info_from_stable_pools(
+    let stable_pair_contract = &reply.contract_address;
+    let stable_pair_info = query_stable_pair_info_from_stable_pairs(
         &deps.querier,
-        Addr::unchecked(stable_pool_contract),
+        Addr::unchecked(stable_pair_contract),
     )?;
 
-    STABLE_POOLS.save(
+    STABLE_PAIRS.save(
         deps.storage,
-        &tmp_stable_pool_info.pair_key,
-        &StablePoolInfoRaw {
-            liquidity_token: deps.api.addr_validate(&stable_pool_info.liquidity_token)?,
-            contract_addr: deps.api.addr_validate(stable_pool_contract)?,
-            asset_infos: tmp_stable_pool_info.asset_infos,
-            asset_decimals: tmp_stable_pool_info.asset_decimals,
-            requirements: stable_pool_info.requirements,
-            commission_rate: Decimal256::from_str(&stable_pool_info.commission_rate.to_string())
+        &tmp_stable_pair_info.pair_key,
+        &StablePairInfoRaw {
+            liquidity_token: deps.api.addr_validate(&stable_pair_info.liquidity_token)?,
+            contract_addr: deps.api.addr_validate(stable_pair_contract)?,
+            asset_infos: tmp_stable_pair_info.asset_infos,
+            asset_decimals: tmp_stable_pair_info.asset_decimals,
+            requirements: stable_pair_info.requirements,
+            commission_rate: Decimal256::from_str(&stable_pair_info.commission_rate.to_string())
                 .unwrap(),
         },
     )?;
 
     Ok(Response::new().add_attributes(vec![
-        ("stable_pool_contract_addr", stable_pool_contract),
-        ("liquidity_token_addr", &stable_pool_info.liquidity_token),
+        ("stable_pair_contract_addr", stable_pair_contract),
+        ("liquidity_token_addr", &stable_pair_info.liquidity_token),
     ]))
 }
 
@@ -212,7 +212,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::StablePool { asset_infos } => to_binary(&query_stable_pool(deps, asset_infos)?),
+        QueryMsg::StablePair { asset_infos } => to_binary(&query_stable_pair(deps, asset_infos)?),
     }
 }
 
@@ -224,19 +224,19 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
             .addr_validate(&state.owner.to_string())?
             .to_string(),
         token_code_id: state.token_code_id,
-        stable_pool_code_id: state.stable_pool_code_id,
+        stable_pair_code_id: state.stable_pair_code_id,
     };
 
     Ok(resp)
 }
 
-pub fn query_stable_pool(deps: Deps, asset_infos: Vec<AssetInfo>) -> StdResult<StablePoolInfo> {
-    let stable_pool_key = pair_key(
+pub fn query_stable_pair(deps: Deps, asset_infos: Vec<AssetInfo>) -> StdResult<StablePairInfo> {
+    let stable_pair_key = pair_key(
         &asset_infos
             .iter()
             .map(|asset_info| asset_info.to_raw(deps.api).unwrap())
             .collect::<Vec<AssetInfoRaw>>(),
     );
-    let stable_pool_info: StablePoolInfoRaw = STABLE_POOLS.load(deps.storage, &stable_pool_key)?;
-    stable_pool_info.to_normal(deps.api)
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIRS.load(deps.storage, &stable_pair_key)?;
+    stable_pair_info.to_normal(deps.api)
 }

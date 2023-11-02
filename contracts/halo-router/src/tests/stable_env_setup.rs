@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod env {
-    use cosmwasm_std::{Addr, Coin, Empty, StdError, Uint128};
-    use cw20::{Cw20Coin, MinterResponse};
+    use cosmwasm_std::{Addr, Coin, Empty, Uint128};
+    use cw20::MinterResponse;
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
     use halo_factory::contract::{
@@ -28,9 +28,9 @@ pub mod env {
         query as HaloStableFactoryQuery, reply as HaloStableFactoryReply,
     };
 
-    use halo_stable_pool::contract::{
-        execute as HaloStablePoolExecute, instantiate as HaloStablePoolInstantiate,
-        query as HaloStablePoolQuery, reply as HaloStablePoolReply,
+    use halo_stable_pair::contract::{
+        execute as HaloStablePairExecute, instantiate as HaloStablePairInstantiate,
+        query as HaloStablePairQuery, reply as HaloStablePairReply,
     };
 
     use halo_stable_factory::msg::InstantiateMsg as HaloStableFactoryInstantiateMsg;
@@ -42,7 +42,6 @@ pub mod env {
     // You MUST define the constants value here
     // ****************************************
     pub const ADMIN: &str = "aura1uh24g2lc8hvvkaaf7awz25lrh5fptthu2dhq0n";
-    pub const USER_1: &str = "aura1fqj2redmssckrdeekhkcvd2kzp9f4nks4fctrt";
 
     pub const NATIVE_DENOM: &str = "uaura";
     pub const NATIVE_BALANCE: u128 = 1_000_000_000_000u128;
@@ -52,12 +51,7 @@ pub mod env {
 
     pub const HALO_TOKEN_SYMBOL: &str = "HALO";
     pub const HALO_TOKEN_NAME: &str = "Halo Token";
-    pub const HALO_TOKEN_DECIMALS: u8 = 18;
     pub const HALO_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000u128;
-
-    pub const USDC_TOKEN_SYMBOL: &str = "USDC";
-    pub const USDC_TOKEN_NAME: &str = "USDC Token";
-    pub const USDC_TOKEN_DECIMALS: u8 = 18;
 
     pub struct ContractInfo {
         pub contract_addr: String,
@@ -120,13 +114,13 @@ pub mod env {
         Box::new(contract)
     }
 
-    fn halo_stable_pool_contract_template() -> Box<dyn Contract<Empty>> {
+    fn halo_stable_pair_contract_template() -> Box<dyn Contract<Empty>> {
         let contract = ContractWrapper::new(
-            HaloStablePoolExecute,
-            HaloStablePoolInstantiate,
-            HaloStablePoolQuery,
+            HaloStablePairExecute,
+            HaloStablePairInstantiate,
+            HaloStablePairQuery,
         )
-        .with_reply(HaloStablePoolReply);
+        .with_reply(HaloStablePairReply);
         Box::new(contract)
     }
 
@@ -185,8 +179,8 @@ pub mod env {
         let halo_token_contract_code_id = app.store_code(halo_token_contract_template());
         let halo_stable_factory_contract_code_id =
             app.store_code(halo_stable_factory_contract_template());
-        let halo_stable_pool_contract_code_id =
-            app.store_code(halo_stable_pool_contract_template());
+        let halo_stable_pair_contract_code_id =
+            app.store_code(halo_stable_pair_contract_template());
 
         // halo factory contract
         // create instantiate message for contract
@@ -220,7 +214,7 @@ pub mod env {
 
         // create instantiate message for contract
         let halo_stable_factory_contract_instantiate_msg = HaloStableFactoryInstantiateMsg {
-            stable_pool_code_id: halo_stable_pool_contract_code_id,
+            stable_pair_code_id: halo_stable_pair_contract_code_id,
             token_code_id: halo_token_contract_code_id,
         };
 
