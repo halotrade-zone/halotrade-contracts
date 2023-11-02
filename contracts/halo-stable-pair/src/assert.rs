@@ -14,9 +14,9 @@ pub fn assert_stable_slippage_tolerance(
             return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
         }
 
-        let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
-        let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
-        let pairs: [Uint256; 2] = [pairs[0].amount.into(), pairs[1].amount.into()];
+        let _one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
+        let _deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
+        let _pairs: [Uint256; 2] = [pairs[0].amount.into(), pairs[1].amount.into()];
 
         // Ensure each prices are not dropped as much as slippage tolerance rate
         // if calc_price_drop(deposits[0], deposits[1], one_minus_slippage_tolerance)

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use bignumber::{Decimal256, Uint256};
+use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -10,7 +10,6 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
-use halo_pair::assert::assert_max_spread;
 use haloswap::{
     asset::{Asset, AssetInfo, AssetInfoRaw, LP_TOKEN_RESERVED_AMOUNT},
     error::ContractError,
@@ -595,8 +594,8 @@ pub fn stable_swap(
     sender: Addr,
     offer_asset: Asset,
     ask_asset: AssetInfo,
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
+    _belief_price: Option<Decimal>,
+    _max_spread: Option<Decimal>,
     to: Option<Addr>,
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
@@ -635,8 +634,8 @@ pub fn stable_swap(
         .checked_sub(offer_asset.amount)
         .unwrap();
 
-    let ask_pool: Uint128 = old_c_amounts[ask_asset_index];
-    let offer_pool: Uint128 = old_c_amounts[offer_asset_index];
+    let _ask_pool: Uint128 = old_c_amounts[ask_asset_index];
+    let _offer_pool: Uint128 = old_c_amounts[offer_asset_index];
     // Decrease decimals of the old_c_amounts to prevent overflow
     old_c_amounts = old_c_amounts
         .iter()
