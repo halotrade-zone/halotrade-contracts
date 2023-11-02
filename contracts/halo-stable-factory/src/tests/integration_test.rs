@@ -1389,7 +1389,6 @@ mod tests {
                 .unwrap();
 
             // assert BUSD Balance of ADMIN after swap
-            println!("Xin chao: {}", 809800311317232000000000000u128 - 799799907999999000000000000);
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
