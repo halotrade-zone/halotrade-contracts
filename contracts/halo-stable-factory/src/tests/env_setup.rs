@@ -18,20 +18,13 @@ pub mod env {
         execute as HaloTokenExecute, instantiate as HaloTokenInstantiate, query as HaloTokenQuery,
     };
 
-    use crate::msg::{
-        ExecuteMsg as HaloStableFactoryExecuteMsg,
-        InstantiateMsg as HaloStableFactoryInstantiateMsg,
-    };
-    use halo_stable_pair::msg::{
-        ExecuteMsg as HaloStablePairExecuteMsg, InstantiateMsg as HaloStablePairInstantiateMsg,
-    };
+    use crate::msg::InstantiateMsg as HaloStableFactoryInstantiateMsg;
     use haloswap::token::InstantiateMsg as HaloTokenInstantiateMsg;
 
     // ****************************************
     // You MUST define the constants value here
     // ****************************************
     pub const ADMIN: &str = "aura1uh24g2lc8hvvkaaf7awz25lrh5fptthu2dhq0n";
-    pub const USER_1: &str = "aura1fqj2redmssckrdeekhkcvd2kzp9f4nks4fctrt";
 
     pub const NATIVE_DENOM: &str = "uaura";
     pub const NATIVE_BALANCE: u128 = 1_000_000_000_000u128;
@@ -41,7 +34,6 @@ pub mod env {
 
     pub const HALO_TOKEN_SYMBOL: &str = "HALO";
     pub const HALO_TOKEN_NAME: &str = "Halo Token";
-    pub const HALO_TOKEN_DECIMALS: u8 = 18;
     pub const HALO_TOKEN_INITIAL_SUPPLY: u128 = 1_000_000_000_000_000_000u128;
 
     pub struct ContractInfo {

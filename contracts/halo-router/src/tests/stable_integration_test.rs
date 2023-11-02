@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::tests::stable_env_setup::env::{
-        instantiate_contracts, ADMIN, NATIVE_DENOM_2};
+    use crate::tests::stable_env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2};
     use bignumber::Decimal256;
     use cosmwasm_std::{
         from_binary, to_binary, Addr, BalanceResponse as BankBalanceResponse, BankQuery, Coin,
@@ -14,15 +13,8 @@ mod tests {
     };
     use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
     use haloswap::asset::{AssetInfo, CreatePairRequirements, PairInfo};
-    use haloswap::factory::{
-        ExecuteMsg as FactoryExecuteMsg, NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
-    };
+    use haloswap::factory::ExecuteMsg as FactoryExecuteMsg;
     use haloswap::factory::{ExecuteMsg as HaloFactoryExecuteMsg, QueryMsg as HaloFactoryQueryMsg};
-    // Mock information for CW20 token contract
-    const MOCK_1000_HALO_TOKEN_AMOUNT: u128 = 1_000_000_000;
-    // Mock information for native token
-    const MOCK_1000_NATIVE_TOKEN_AMOUNT: u128 = 1_000_000_000;
-    const MOCK_TRANSACTION_FEE: u128 = 5000;
 
     mod execute_interacting_with_stable_swap {
         use cosmwasm_std::{Querier, WasmQuery};
@@ -32,10 +24,8 @@ mod tests {
             state::{CreateStablePairRequirements, StablePairInfo},
         };
         use haloswap::{
-            asset::{Asset, LPTokenInfo, LP_TOKEN_RESERVED_AMOUNT},
-            pair::{
-                ExecuteMsg, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
-            },
+            asset::{Asset, LPTokenInfo},
+            pair::ExecuteMsg,
             router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
         };
         use std::str::FromStr;
@@ -521,7 +511,6 @@ mod tests {
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
-
 
             assert!(response.is_ok());
 

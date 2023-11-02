@@ -4,8 +4,8 @@ use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo,
+    Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
@@ -23,8 +23,8 @@ use crate::{
     math::AmpFactor,
     msg::{Cw20StableHookMsg, ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{
-        Config, StablePairInfoRaw, AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG,
-        STABLE_PAIR_INFO, decrease_decimals, increase_decimals
+        decrease_decimals, increase_decimals, Config, StablePairInfoRaw, AMP_FACTOR_INFO,
+        COMMISSION_RATE_INFO, CONFIG, STABLE_PAIR_INFO,
     },
 };
 
@@ -615,7 +615,10 @@ pub fn stable_swap(
     // Get amount of offer asset
     let offer_asset_amount = offer_asset.amount;
     // Decrease decimals of the offer_asset_amount to prevent overflow
-    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pair_info.asset_decimals[offer_asset_index]);
+    let offer_asset_amount = decrease_decimals(
+        offer_asset_amount,
+        stable_pair_info.asset_decimals[offer_asset_index],
+    );
     let mut messages: Vec<CosmosMsg> = vec![];
     // Get index of ask asset
     let ask_asset_index = pairs
@@ -646,7 +649,10 @@ pub fn stable_swap(
         .unwrap();
 
     // Increase decimals of the return_amount to the original decimals
-    let return_amount = increase_decimals(return_amount, stable_pair_info.asset_decimals[ask_asset_index]);
+    let return_amount = increase_decimals(
+        return_amount,
+        stable_pair_info.asset_decimals[ask_asset_index],
+    );
 
     let return_asset = Asset {
         info: pairs[ask_asset_index].info.clone(),
@@ -727,7 +733,10 @@ pub fn query_stable_simulation(
     // Get offer asset amount
     let offer_asset_amount = offer_asset.amount;
     // Decrease decimals of the offer_asset_amount to prevent overflow
-    let offer_asset_amount = decrease_decimals(offer_asset_amount, stable_pair_info.asset_decimals[offer_asset_index]);
+    let offer_asset_amount = decrease_decimals(
+        offer_asset_amount,
+        stable_pair_info.asset_decimals[offer_asset_index],
+    );
 
     // Get ask asset index
     let ask_asset_index = pairs
@@ -758,8 +767,10 @@ pub fn query_stable_simulation(
         )
         .unwrap();
     // Increase decimals of the return_amount to the original decimals
-    let return_amount = increase_decimals(return_amount, stable_pair_info.asset_decimals[ask_asset_index]);
-
+    let return_amount = increase_decimals(
+        return_amount,
+        stable_pair_info.asset_decimals[ask_asset_index],
+    );
     let return_asset = Asset {
         info: pairs[ask_asset_index].info.clone(),
         amount: return_amount,

@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::tests::env_setup::env::{
-        instantiate_contracts, ADMIN, NATIVE_DENOM, NATIVE_DENOM_2, USER_1,
-    };
+    use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2};
     // Mock 1_000_000_000 USDC token amount
     const MOCK_1_000_000_000_USDC: u128 = 1_000_000_000_000_000_000_000_000_000u128;
     // Mock 1_000_000_000 USDT token amount
@@ -24,19 +22,13 @@ mod tests {
         use cosmwasm_std::{to_binary, Addr, Coin, Uint128};
         use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
         use cw_multi_test::Executor;
-        use halo_stable_pair::msg::{
-            ExecuteMsg as StablePairExecuteMsg, QueryMsg as StablePairQueryMsg,
-        };
+        use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
         use halo_stable_pair::{
             math::AmpFactor,
             msg::Cw20StableHookMsg,
             state::{CreateStablePairRequirements, StablePairInfo},
         };
-        use haloswap::asset::{Asset, AssetInfo, CreatePairRequirements, LPTokenInfo};
-        use haloswap::factory::{
-            ExecuteMsg as HaloFactoryExecuteMsg, NativeTokenDecimalsResponse,
-            QueryMsg as HaloFactoryQueryMsg,
-        };
+        use haloswap::asset::{Asset, AssetInfo, LPTokenInfo};
 
         use super::*;
         // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
@@ -52,8 +44,6 @@ mod tests {
             let (mut app, contracts) = instantiate_contracts();
             // get the stable factory contract
             let stable_factory_contract = &contracts[0].contract_addr.clone();
-            // get the cw20 token contract
-            let cw20_token_contract = &contracts[1].contract_addr.clone();
             // get the USDC contract
             let usdc_token_contract = &contracts[2].contract_addr.clone();
             // get the USDT contract
@@ -470,7 +460,7 @@ mod tests {
                 )
                 .unwrap();
 
-                // Assert BUSD Balance of ADMIN
+            // Assert BUSD Balance of ADMIN
             assert_eq!(
                 response,
                 BalanceResponse {
@@ -648,8 +638,6 @@ mod tests {
             let (mut app, contracts) = instantiate_contracts();
             // get the stable factory contract
             let stable_factory_contract = &contracts[0].contract_addr.clone();
-            // get the cw20 token contract
-            let cw20_token_contract = &contracts[1].contract_addr.clone();
             // get the USDC contract
             let usdc_token_contract = &contracts[2].contract_addr.clone();
             // get the USDT contract

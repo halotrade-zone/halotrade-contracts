@@ -1,6 +1,5 @@
-use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, CanonicalAddr, Uint128};
+use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
 use halo_stable_pair::state::StablePairInfoRaw;
 use haloswap::asset::AssetInfoRaw;

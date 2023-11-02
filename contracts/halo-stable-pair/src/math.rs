@@ -155,15 +155,15 @@ impl AmpFactor {
                 // for i in 0..new_balances.len() {
                 //     let ideal_balance =
                 //         d_1 * Decimal256::from_uint256(Uint256::from(old_c_amounts[i])) / d_0;
-                    // let difference = if ideal_balance
-                    //     > Decimal256::from_uint256(Uint256::from(new_balances[i]))
-                    // {
-                    //     ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
-                    // } else {
-                    //     Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
-                    // };
-                    // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
-                    // new_balances[i] = new_balances[i] - fee;
+                // let difference = if ideal_balance
+                //     > Decimal256::from_uint256(Uint256::from(new_balances[i]))
+                // {
+                //     ideal_balance - Decimal256::from_uint256(Uint256::from(new_balances[i]))
+                // } else {
+                //     Decimal256::from_uint256(Uint256::from(new_balances[i])) - ideal_balance
+                // };
+                // let fee = difference * Decimal256::from_uint256(Uint256::from(fees)) / Decimal256::from_uint256(Uint256::from(10000u128));
+                // new_balances[i] = new_balances[i] - fee;
                 // }
 
                 let d_2 = self.compute_d(&new_balances)?;
