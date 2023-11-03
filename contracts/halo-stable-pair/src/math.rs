@@ -74,10 +74,10 @@ impl AmpFactor {
     /// Equation:
     /// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
     pub fn compute_d(&self, c_amounts: &Vec<Uint128>) -> Option<Decimal256> {
-        let n_coins: u32 = (c_amounts.len() as u32).into();
+        let n_coins: u32 = c_amounts.len() as u32;
         let sum_x = Uint256::from(c_amounts.iter().fold(Uint128::zero(), |sum, i| sum + i));
         if sum_x.is_zero() {
-            return Some(Decimal256::zero());
+            Some(Decimal256::zero())
         } else {
             let amp_factor = self.compute_amp_factor()?;
             let mut d_prev;
@@ -107,8 +107,8 @@ impl AmpFactor {
                 let denominator = d_prev * (Decimal256::from_uint256(ann) - Decimal256::one())
                     + (d_prod
                         * (Decimal256::from_uint256(Uint256::from(Uint128::from(n_coins)))
-                            + Decimal256::one()))
-                    .into();
+                            + Decimal256::one()));
+
                 d = numerator / denominator;
 
                 // Equality with the precision of 1
@@ -135,7 +135,7 @@ impl AmpFactor {
     ) -> Option<(Uint128, Uint128)> {
         if pair_token_supply.is_zero() {
             let invariant = self.compute_d(deposit_c_amounts)? * Uint256::one();
-            return Some((invariant.into(), Uint128::zero()));
+            Some((invariant.into(), Uint128::zero()))
         } else {
             let n_coins = old_c_amounts.len();
             // Initial invariant
@@ -149,7 +149,7 @@ impl AmpFactor {
             // Invariant after change
             let d_1 = self.compute_d(&new_balances)?;
             if d_1 <= d_0 {
-                return None;
+                None
             } else {
                 // Recalculate the invariant accounting for fees
                 // for i in 0..new_balances.len() {
@@ -182,10 +182,10 @@ impl AmpFactor {
     /// all amounts are in comparable precision
     pub fn compute_lp_amount_for_withdraw(
         &self,
-        withdraw_c_amounts: &Vec<Uint128>, // withdraw tokens in comparable precision
-        old_c_amounts: &Vec<Uint128>,      // current in-pair tokens in comparable precision
-        pair_token_supply: Uint128,        // current share supply
-        _fees: Uint128,                    // fees in decimal
+        withdraw_c_amounts: &[Uint128], // withdraw tokens in comparable precision
+        old_c_amounts: &Vec<Uint128>,   // current in-pair tokens in comparable precision
+        pair_token_supply: Uint128,     // current share supply
+        _fees: Uint128,                 // fees in decimal
     ) -> Option<(Uint128, Uint128)> {
         let n_coins = old_c_amounts.len();
         // Initial invariant, D0
@@ -244,7 +244,7 @@ impl AmpFactor {
         index_x: usize,      // index of x_token
         index_y: usize,      // index of y_token
     ) -> Option<Decimal256> {
-        let n_coins: u32 = (current_c_amounts.len() as u32).into();
+        let n_coins: u32 = current_c_amounts.len() as u32;
         let amp_factor = self.compute_amp_factor()?;
         let ann = Uint256::from(
             amp_factor
@@ -266,7 +266,7 @@ impl AmpFactor {
                 ann * Uint256::from(Uint128::from(n_coins.checked_pow(n_coins)?)),
             );
 
-        let b = d / Decimal256::from_uint256(Uint256::from(ann)) + s_;
+        let b = d / Decimal256::from_uint256(ann) + s_;
 
         // Solve for y by approximating: y**2 + b*y = c
         let mut y_prev;
@@ -285,7 +285,7 @@ impl AmpFactor {
                 break;
             }
         }
-        Some(y.into())
+        Some(y)
     }
 
     /// Compute amount of token user will receive after swap

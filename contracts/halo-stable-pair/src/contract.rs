@@ -267,7 +267,7 @@ pub fn provide_liquidity(
     // get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
+        .addr_validate(stable_pair_info.liquidity_token.as_ref())?;
 
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
@@ -306,12 +306,12 @@ pub fn provide_liquidity(
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: deps
                 .api
-                .addr_validate(&stable_pair_info.liquidity_token.to_string())?
+                .addr_validate(stable_pair_info.liquidity_token.as_ref())?
                 .to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: deps
                     .api
-                    .addr_validate(&stable_pair_info.liquidity_token.to_string())?
+                    .addr_validate(stable_pair_info.liquidity_token.as_ref())?
                     .to_string(),
                 amount: Uint128::from(LP_TOKEN_RESERVED_AMOUNT),
             })?,
@@ -326,7 +326,7 @@ pub fn provide_liquidity(
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: deps
             .api
-            .addr_validate(&stable_pair_info.liquidity_token.to_string())?
+            .addr_validate(stable_pair_info.liquidity_token.as_ref())?
             .to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
             recipient: receiver.to_string(),
@@ -341,14 +341,11 @@ pub fn provide_liquidity(
         ("receiver", receiver.as_str()),
         (
             "assets",
-            &format!(
-                "{}",
-                assets
-                    .iter()
-                    .map(|asset| asset.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
+            &assets
+                .iter()
+                .map(|asset| asset.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
         ),
         ("share", &share.to_string()),
     ]))
@@ -374,13 +371,13 @@ pub fn remove_liquidity_by_share(
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
+            .addr_validate(stable_pair_info.liquidity_token.as_ref())?,
     )?
     .total_supply;
 
     // Get the amount of assets in the stable pair
     let mut pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
 
     // Get the amount of assets that user will receive after removing liquidity
     let assets_amount: Vec<Uint128> = pairs
@@ -425,7 +422,7 @@ pub fn remove_liquidity_by_share(
     // Get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
+        .addr_validate(stable_pair_info.liquidity_token.as_ref())?;
 
     // Burn LP token from sender
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -440,14 +437,11 @@ pub fn remove_liquidity_by_share(
         ("share", &share.to_string()),
         (
             "assets",
-            &format!(
-                "{}",
-                pairs
-                    .iter()
-                    .map(|asset| asset.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
+            &pairs
+                .iter()
+                .map(|asset| asset.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
         ),
     ]))
 }
@@ -465,14 +459,14 @@ pub fn remove_liquidity_by_token(
     let sender_share_balance = query_token_balance(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
+            .addr_validate(stable_pair_info.liquidity_token.as_ref())?,
         info.sender.clone(),
     )?;
     // Get total supply of the LP token
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
+            .addr_validate(stable_pair_info.liquidity_token.as_ref())?,
     )?
     .total_supply;
     // Get amp factor info
@@ -549,7 +543,7 @@ pub fn remove_liquidity_by_token(
     // Get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
+        .addr_validate(stable_pair_info.liquidity_token.as_ref())?;
 
     // Transfer LP token from sender to contract
     messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -575,18 +569,16 @@ pub fn remove_liquidity_by_token(
         ("share", &share.to_string()),
         (
             "assets",
-            &format!(
-                "{}",
-                assets
-                    .iter()
-                    .map(|asset| asset.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
+            &assets
+                .iter()
+                .map(|asset| asset.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
         ),
     ]))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn stable_swap(
     deps: DepsMut,
     env: Env,
@@ -603,7 +595,7 @@ pub fn stable_swap(
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get index of offer asset
@@ -742,10 +734,9 @@ pub fn query_stable_simulation(
 
     let contract_addr = deps
         .api
-        .addr_validate(&stable_pair_info.contract_addr.to_string())?;
+        .addr_validate(stable_pair_info.contract_addr.as_ref())?;
     // get pair info of the stable pair contract
-    let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, contract_addr.clone())?;
+    let pairs: Vec<Asset> = stable_pair_info.query_pairs(&deps.querier, deps.api, contract_addr)?;
     // Commission rate OR Fee amount for framework
     let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
     // Get AMP factor info
@@ -821,7 +812,7 @@ pub fn query_provide_liquidity_simulation(
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // query the information of the stable pair of assets
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
     // get the amount of assets that user deposited after checking the assets is same as the assets in stable pair
     let deposits: Vec<Uint128> = pairs
         .iter()
@@ -855,7 +846,7 @@ pub fn query_provide_liquidity_simulation(
     // get the address of the LP token
     let liquidity_token = deps
         .api
-        .addr_validate(&stable_pair_info.liquidity_token.to_string())?;
+        .addr_validate(stable_pair_info.liquidity_token.as_ref())?;
 
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
@@ -886,13 +877,13 @@ pub fn query_remove_liquidity_by_share_simulation(
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
+            .addr_validate(stable_pair_info.liquidity_token.as_ref())?,
     )?
     .total_supply;
 
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
     // Get the amount of assets that user will receive after removing liquidity
     let assets_amount: Vec<Uint128> = pairs
         .iter()
@@ -925,14 +916,14 @@ pub fn query_remove_liquidity_by_token_simulation(
     let shares_total_supply = query_token_info(
         &deps.querier,
         deps.api
-            .addr_validate(&stable_pair_info.liquidity_token.to_string())?,
+            .addr_validate(stable_pair_info.liquidity_token.as_ref())?,
     )?
     .total_supply;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
     // Get current total amount of assets in the stable pair
     let old_c_amounts: Vec<Uint128> = pairs
         .iter()

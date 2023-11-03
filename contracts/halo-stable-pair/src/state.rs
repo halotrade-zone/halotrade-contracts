@@ -50,11 +50,9 @@ impl StablePairInfoRaw {
                 .iter()
                 .map(|x| x.to_normal(api))
                 .collect::<StdResult<Vec<AssetInfo>>>()?,
-            contract_addr: api
-                .addr_validate(&self.contract_addr.to_string())?
-                .to_string(),
+            contract_addr: api.addr_validate(self.contract_addr.as_ref())?.to_string(),
             liquidity_token: api
-                .addr_validate(&self.liquidity_token.to_string())?
+                .addr_validate(self.liquidity_token.as_ref())?
                 .to_string(),
             asset_decimals: self.asset_decimals.clone(),
             requirements: self.requirements.clone(),

@@ -4,8 +4,8 @@ use haloswap::{asset::Asset, error::ContractError};
 
 pub fn assert_stable_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
-    deposits: &Vec<Uint128>,
-    pairs: &Vec<Asset>,
+    deposits: &[Uint128],
+    pairs: &[Asset],
 ) -> Result<(), ContractError> {
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let slippage_tolerance: Decimal256 = slippage_tolerance.into();
