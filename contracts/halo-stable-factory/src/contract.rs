@@ -70,6 +70,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_create_stable_pair(
     deps: DepsMut,
     env: Env,
@@ -137,15 +138,11 @@ pub fn execute_create_stable_pair(
             ("action", "create_stable_pair"),
             (
                 "stable_assets",
-                &format!(
-                    "{}",
-                    // Loop and add all asset_info to get stable assets
-                    &asset_infos
-                        .iter()
-                        .map(|asset_info| asset_info.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",")
-                ),
+                &asset_infos
+                    .iter()
+                    .map(|asset_info| asset_info.to_string()) // Loop and add all asset_info to get stable assets
+                    .collect::<Vec<String>>()
+                    .join(","),
             ),
         ])
         .add_submessage(SubMsg {
@@ -219,10 +216,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let state: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
-        owner: deps
-            .api
-            .addr_validate(&state.owner.to_string())?
-            .to_string(),
+        owner: deps.api.addr_validate(state.owner.as_ref())?.to_string(),
         token_code_id: state.token_code_id,
         stable_pair_code_id: state.stable_pair_code_id,
     };

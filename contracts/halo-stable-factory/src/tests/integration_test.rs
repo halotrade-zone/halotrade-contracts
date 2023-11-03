@@ -8,7 +8,7 @@ mod tests {
     // Mock 1_000_000_000 BUSD token amount
     const MOCK_1_000_000_000_BUSD: u128 = 1_000_000_000_000_000_000_000_000_000u128;
     // Decimal 18 macro
-    const DECIMAL_18: u128 = 1_000_000_000_000_000_000u128;
+    const ONE_UNIT_OF_DECIMAL_18: u128 = 1_000_000_000_000_000_000u128;
 
     const MOCK_TRANSACTION_FEE: u128 = 5000;
     mod execute_contract_native_with_cw20_token {
@@ -214,8 +214,8 @@ mod tests {
 
             // increase allowance for stable pair contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
-                spender: response.contract_addr.clone(),
-                amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
+                spender: response.contract_addr,
+                amount: Uint128::from(1_000_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 expires: None,
             };
 
@@ -256,19 +256,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -314,19 +314,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(100_000u128 * DECIMAL_18),
+                        amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(200_000u128 * DECIMAL_18),
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(200_000u128 * DECIMAL_18),
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -421,7 +421,9 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDC - 1 * DECIMAL_18 - 100_000u128 * DECIMAL_18
+                        MOCK_1_000_000_000_USDC
+                            - ONE_UNIT_OF_DECIMAL_18
+                            - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
                             + 50_000_499_999_799_998_617_057u128
                     ),
                 }
@@ -443,7 +445,9 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                        MOCK_1_000_000_000_USDT
+                            - ONE_UNIT_OF_DECIMAL_18
+                            - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                             + 100_000_499_999_599_999_234_109u128
                     ),
                 }
@@ -465,7 +469,9 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                        MOCK_1_000_000_000_BUSD
+                            - ONE_UNIT_OF_DECIMAL_18
+                            - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                             + 100_000_499_999_599_999_234_109u128
                     ),
                 }
@@ -497,19 +503,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(25_000u128 * DECIMAL_18),
+                        amount: Uint128::from(25_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(50_000u128 * DECIMAL_18),
+                        amount: Uint128::from(50_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(50_000u128 * DECIMAL_18),
+                        amount: Uint128::from(50_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 max_burn_share: None,
@@ -544,9 +550,11 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDC - 1 * DECIMAL_18 - 100_000u128 * DECIMAL_18
+                        MOCK_1_000_000_000_USDC
+                            - ONE_UNIT_OF_DECIMAL_18
+                            - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
                             + 50_000_499_999_799_998_617_057u128
-                            + 25_000u128 * DECIMAL_18
+                            + 25_000u128 * ONE_UNIT_OF_DECIMAL_18
                     ),
                 }
             );
@@ -567,9 +575,11 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                        MOCK_1_000_000_000_USDT
+                            - ONE_UNIT_OF_DECIMAL_18
+                            - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                             + 100_000_499_999_599_999_234_109u128
-                            + 50_000 * DECIMAL_18
+                            + 50_000 * ONE_UNIT_OF_DECIMAL_18
                     ),
                 }
             );
@@ -590,9 +600,11 @@ mod tests {
                 response,
                 BalanceResponse {
                     balance: Uint128::from(
-                        MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                        MOCK_1_000_000_000_BUSD
+                            - ONE_UNIT_OF_DECIMAL_18
+                            - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                             + 100_000_499_999_599_999_234_109u128
-                            + 50_000 * DECIMAL_18
+                            + 50_000 * ONE_UNIT_OF_DECIMAL_18
                     ),
                 }
             );
@@ -809,7 +821,7 @@ mod tests {
             // increase allowance for stable pair contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: response.contract_addr.clone(),
-                amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
+                amount: Uint128::from(1_000_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 expires: None,
             };
 
@@ -850,19 +862,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -908,19 +920,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(100_000u128 * DECIMAL_18),
+                        amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(200_000u128 * DECIMAL_18),
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(200_000u128 * DECIMAL_18),
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -954,7 +966,11 @@ mod tests {
             // assert USDC Balance of ADMIN before swap
             assert_eq!(
                 usdc_balance_before_swap.balance,
-                Uint128::from(MOCK_1_000_000_000_USDC - 1 * DECIMAL_18 - 100_000u128 * DECIMAL_18),
+                Uint128::from(
+                    MOCK_1_000_000_000_USDC
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
+                ),
             );
 
             // Query USDT Balance of ADMIN before swap
@@ -971,7 +987,11 @@ mod tests {
             // assert USDT Balance of ADMIN before swap
             assert_eq!(
                 usdt_balance_before_swap.balance,
-                Uint128::from(MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18),
+                Uint128::from(
+                    MOCK_1_000_000_000_USDT
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
+                ),
             );
 
             // ADMIN swap 1 USDC to USDT
@@ -980,7 +1000,7 @@ mod tests {
                     info: AssetInfo::Token {
                         contract_addr: usdc_token_contract.clone(),
                     },
-                    amount: Uint128::from(1u128 * DECIMAL_18),
+                    amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                 },
                 ask_asset: AssetInfo::Token {
                     contract_addr: usdt_token_contract.clone(),
@@ -993,7 +1013,7 @@ mod tests {
             // Send 1 USDC to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
-                amount: Uint128::from(1u128 * DECIMAL_18),
+                amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                 msg: to_binary(&swap_msg).unwrap(),
             };
 
@@ -1023,9 +1043,9 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                        - 1 * DECIMAL_18
-                        - 100_000u128 * DECIMAL_18
-                        - 1 * DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
                 ), // 1 USDC transferred to the stable pair
             );
 
@@ -1044,7 +1064,9 @@ mod tests {
             assert_eq!(
                 usdt_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                    MOCK_1_000_000_000_USDT
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 1_000_053_000_000_000_000u128
                 ), // 1 USDT received from the stable pair
             );
@@ -1055,7 +1077,7 @@ mod tests {
                     info: AssetInfo::Token {
                         contract_addr: usdt_token_contract.clone(),
                     },
-                    amount: Uint128::from(9u128 * DECIMAL_18),
+                    amount: Uint128::from(9u128 * ONE_UNIT_OF_DECIMAL_18),
                 },
                 ask_asset: AssetInfo::Token {
                     contract_addr: busd_token_contract.clone(),
@@ -1068,7 +1090,7 @@ mod tests {
             // Send 9 USDT to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
-                amount: Uint128::from(9u128 * DECIMAL_18),
+                amount: Uint128::from(9u128 * ONE_UNIT_OF_DECIMAL_18),
                 msg: to_binary(&swap_msg).unwrap(),
             };
 
@@ -1097,9 +1119,11 @@ mod tests {
             assert_eq!(
                 usdt_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                    MOCK_1_000_000_000_USDT
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 1_000_053_000_000_000_000u128
-                        - 9 * DECIMAL_18
+                        - 9 * ONE_UNIT_OF_DECIMAL_18
                 ), // 9 USDT transferred to the stable pair
             );
 
@@ -1118,7 +1142,9 @@ mod tests {
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                    MOCK_1_000_000_000_BUSD
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 8_999_999_000_000_000_000u128
                 ), // 9 BUSD received from the stable pair
             );
@@ -1129,7 +1155,7 @@ mod tests {
                     info: AssetInfo::Token {
                         contract_addr: busd_token_contract.clone(),
                     },
-                    amount: Uint128::from(100u128 * DECIMAL_18),
+                    amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
                 },
                 ask_asset: AssetInfo::Token {
                     contract_addr: usdc_token_contract.clone(),
@@ -1142,7 +1168,7 @@ mod tests {
             // Send 100 BUSD to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
-                amount: Uint128::from(100u128 * DECIMAL_18),
+                amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
                 msg: to_binary(&swap_msg).unwrap(),
             };
 
@@ -1171,9 +1197,11 @@ mod tests {
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                    MOCK_1_000_000_000_BUSD
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 8_999_999_000_000_000_000u128
-                        - 100 * DECIMAL_18
+                        - 100 * ONE_UNIT_OF_DECIMAL_18
                 ), // 100 BUSD transferred to the stable pair
             );
 
@@ -1193,9 +1221,9 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                        - 1 * DECIMAL_18
-                        - 100_000u128 * DECIMAL_18
-                        - 1 * DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
                         + 99_994_634_000_000_000_000u128
                 ), // 100 USDC received from the stable pair
             );
@@ -1206,7 +1234,7 @@ mod tests {
                     info: AssetInfo::Token {
                         contract_addr: usdc_token_contract.clone(),
                     },
-                    amount: Uint128::from(50_000u128 * DECIMAL_18),
+                    amount: Uint128::from(50_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 },
                 ask_asset: AssetInfo::Token {
                     contract_addr: usdt_token_contract.clone(),
@@ -1219,7 +1247,7 @@ mod tests {
             // Send 50_000 USDC to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
-                amount: Uint128::from(50_000u128 * DECIMAL_18),
+                amount: Uint128::from(50_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 msg: to_binary(&swap_msg).unwrap(),
             };
 
@@ -1249,11 +1277,11 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                        - 1 * DECIMAL_18
-                        - 100_000u128 * DECIMAL_18
-                        - 1 * DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
                         + 99_994_634_000_000_000_000u128
-                        - 50_000 * DECIMAL_18
+                        - 50_000 * ONE_UNIT_OF_DECIMAL_18
                 ), // 50_000 USDC transferred to the stable pair
             );
 
@@ -1272,9 +1300,11 @@ mod tests {
             assert_eq!(
                 usdt_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_USDT - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                    MOCK_1_000_000_000_USDT
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 1_000_053_000_000_000_000u128
-                        - 9 * DECIMAL_18
+                        - 9 * ONE_UNIT_OF_DECIMAL_18
                         + 50_001_194_511_000_000_000_000u128
                 ), // 50_000 USDT received from the stable pair
             );
@@ -1286,19 +1316,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(100_000_000u128 * DECIMAL_18),
+                        amount: Uint128::from(100_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(150_000_000u128 * DECIMAL_18),
+                        amount: Uint128::from(150_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(200_000_000u128 * DECIMAL_18),
+                        amount: Uint128::from(200_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -1324,7 +1354,7 @@ mod tests {
                     info: AssetInfo::Token {
                         contract_addr: usdc_token_contract.clone(),
                     },
-                    amount: Uint128::from(10_000_000u128 * DECIMAL_18),
+                    amount: Uint128::from(10_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 },
                 ask_asset: AssetInfo::Token {
                     contract_addr: busd_token_contract.clone(),
@@ -1337,7 +1367,7 @@ mod tests {
             // Send 10_000_000 USDC to stable pair contract to swap
             let send_msg: Cw20ExecuteMsg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
-                amount: Uint128::from(10_000_000u128 * DECIMAL_18),
+                amount: Uint128::from(10_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 msg: to_binary(&swap_msg).unwrap(),
             };
 
@@ -1367,13 +1397,13 @@ mod tests {
                 usdc_balance_after_swap.balance,
                 Uint128::from(
                     MOCK_1_000_000_000_USDC
-                        - 1 * DECIMAL_18
-                        - 100_000u128 * DECIMAL_18
-                        - 1 * DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 100_000u128 * ONE_UNIT_OF_DECIMAL_18
+                        - ONE_UNIT_OF_DECIMAL_18
                         + 99_994_634_000_000_000_000u128
-                        - 50_000 * DECIMAL_18
-                        - 100_000_000u128 * DECIMAL_18
-                        - 10_000_000 * DECIMAL_18
+                        - 50_000 * ONE_UNIT_OF_DECIMAL_18
+                        - 100_000_000u128 * ONE_UNIT_OF_DECIMAL_18
+                        - 10_000_000 * ONE_UNIT_OF_DECIMAL_18
                 ), // 100_000_000 USDC transferred to the stable pair
             );
 
@@ -1392,10 +1422,12 @@ mod tests {
             assert_eq!(
                 busd_balance_after_swap.balance,
                 Uint128::from(
-                    MOCK_1_000_000_000_BUSD - 1 * DECIMAL_18 - 200_000u128 * DECIMAL_18
+                    MOCK_1_000_000_000_BUSD
+                        - ONE_UNIT_OF_DECIMAL_18
+                        - 200_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 8_999_999_000_000_000_000u128
-                        - 100 * DECIMAL_18
-                        - 200_000_000u128 * DECIMAL_18
+                        - 100 * ONE_UNIT_OF_DECIMAL_18
+                        - 200_000_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 10_000_403_317_233_000_000_000_000u128 // 10_000_000 BUSD received from the stable pair
                 ),
             );

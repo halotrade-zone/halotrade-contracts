@@ -39,7 +39,7 @@ mod tests {
         // Mock 1_000_000_000 BUSD token amount
         const MOCK_1_000_000_000_BUSD: u128 = 1_000_000_000_000_000_000_000_000_000u128;
         // Decimal 18 macro
-        const DECIMAL_18: u128 = 1_000_000_000_000_000_000u128;
+        const ONE_UNIT_OF_DECIMAL_18: u128 = 1_000_000_000_000_000_000u128;
         // Decimal 6 macro
         const DECIMAL_6: u128 = 1_000_000u128;
 
@@ -232,7 +232,7 @@ mod tests {
             // increase allowance for stable pool contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: create_stable_pair_response.contract_addr.clone(),
-                amount: Uint128::from(1_000_000_000u128 * DECIMAL_18),
+                amount: Uint128::from(1_000_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 expires: None,
             };
 
@@ -273,19 +273,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(1u128 * DECIMAL_18),
+                        amount: Uint128::from(ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -331,19 +331,19 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(10_000u128 * DECIMAL_18),
+                        amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: usdt_token_contract.clone(),
                         },
-                        amount: Uint128::from(20_000u128 * DECIMAL_18),
+                        amount: Uint128::from(20_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: busd_token_contract.clone(),
                         },
-                        amount: Uint128::from(30_000u128 * DECIMAL_18),
+                        amount: Uint128::from(30_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,
@@ -467,7 +467,7 @@ mod tests {
             // increase allowance for pool contract for classic pool
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
                 spender: create_classic_pool_response.contract_addr.clone(),
-                amount: Uint128::from(10_000u128 * DECIMAL_18),
+                amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 expires: None,
             };
 
@@ -494,7 +494,7 @@ mod tests {
                         info: AssetInfo::Token {
                             contract_addr: usdc_token_contract.clone(),
                         },
-                        amount: Uint128::from(5_000u128 * DECIMAL_18),
+                        amount: Uint128::from(5_000u128 * ONE_UNIT_OF_DECIMAL_18),
                     },
                 ],
                 slippage_tolerance: None,

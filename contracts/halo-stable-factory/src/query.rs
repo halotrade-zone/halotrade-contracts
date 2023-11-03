@@ -25,7 +25,7 @@ pub fn query_stable_pair_info(
     querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: stable_factory_contract.to_string(),
         msg: to_binary(&StableFactoryQueryMsg::StablePair {
-            asset_infos: asset_infos.clone(),
+            asset_infos: asset_infos.to_vec(),
         })?,
     }))
 }
