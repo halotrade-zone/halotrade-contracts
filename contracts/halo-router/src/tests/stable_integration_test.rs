@@ -41,7 +41,7 @@ mod tests {
         // Decimal 18 macro
         const ONE_UNIT_OF_DECIMAL_18: u128 = 1_000_000_000_000_000_000u128;
         // Decimal 6 macro
-        const DECIMAL_6: u128 = 1_000_000u128;
+        const ONE_UNIT_OF_DECIMAL_6: u128 = 1_000_000u128;
 
         const MOCK_TRANSACTION_FEE: u128 = 5000;
 
@@ -353,7 +353,7 @@ mod tests {
             // Execute provide liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(create_stable_pair_response.contract_addr.to_string()),
+                Addr::unchecked(create_stable_pair_response.contract_addr),
                 &provide_liquidity_msg,
                 &[Coin {
                     amount: Uint128::from(MOCK_TRANSACTION_FEE),
@@ -488,7 +488,7 @@ mod tests {
                         info: AssetInfo::NativeToken {
                             denom: NATIVE_DENOM_2.to_string(),
                         },
-                        amount: Uint128::from(10_000u128 * DECIMAL_6),
+                        amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_6),
                     },
                     Asset {
                         info: AssetInfo::Token {
@@ -504,10 +504,10 @@ mod tests {
             // Execute provide liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(create_classic_pool_response.contract_addr.to_string()),
+                Addr::unchecked(create_classic_pool_response.contract_addr),
                 &provide_liquidity_msg,
                 &[Coin {
-                    amount: Uint128::from(10_000u128 * DECIMAL_6),
+                    amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_6),
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
@@ -587,7 +587,7 @@ mod tests {
                 Addr::unchecked(router_contract.to_string()),
                 &swap_msg,
                 &[Coin {
-                    amount: Uint128::from(100u128 * DECIMAL_6),
+                    amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_6),
                     denom: NATIVE_DENOM_2.to_string(),
                 }],
             );
@@ -605,8 +605,8 @@ mod tests {
             // Assert balance of ADMIN in NATIVE_DENOM_2 after swap
             assert_eq!(
                 balance.amount.amount,
-                denom_2_balance_before_swap.amount.amount - Uint128::from(100u128 * DECIMAL_6)
-                    + Uint128::from(1u128 * DECIMAL_6), // platform fee back to ADMIN
+                denom_2_balance_before_swap.amount.amount - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_6)
+                    + Uint128::from(ONE_UNIT_OF_DECIMAL_6), // platform fee back to ADMIN
             );
 
             // query balance of ADMIN in USDT after swap
