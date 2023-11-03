@@ -820,7 +820,7 @@ mod tests {
 
             // increase allowance for stable pair contract
             let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
-                spender: response.contract_addr.clone(),
+                spender: response.contract_addr,
                 amount: Uint128::from(1_000_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
                 expires: None,
             };

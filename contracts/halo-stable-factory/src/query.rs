@@ -20,7 +20,7 @@ pub fn query_stable_pair_info_from_stable_pairs(
 pub fn query_stable_pair_info(
     querier: &QuerierWrapper,
     stable_factory_contract: Addr,
-    asset_infos: &Vec<AssetInfo>,
+    asset_infos: &[AssetInfo],
 ) -> StdResult<StablePairInfo> {
     querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: stable_factory_contract.to_string(),
