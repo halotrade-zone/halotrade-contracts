@@ -605,7 +605,8 @@ mod tests {
             // Assert balance of ADMIN in NATIVE_DENOM_2 after swap
             assert_eq!(
                 balance.amount.amount,
-                denom_2_balance_before_swap.amount.amount - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_6)
+                denom_2_balance_before_swap.amount.amount
+                    - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_6)
                     + Uint128::from(ONE_UNIT_OF_DECIMAL_6), // platform fee back to ADMIN
             );
 
