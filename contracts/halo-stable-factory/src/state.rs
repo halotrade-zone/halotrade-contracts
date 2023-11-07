@@ -23,14 +23,13 @@ pub struct TmpStablePairInfo {
 pub const TMP_STABLE_PAIR_INFO: Item<TmpStablePairInfo> = Item::new("tmp_stable_pair_info");
 pub const STABLE_PAIRS: Map<&[u8], StablePairInfoRaw> = Map::new("stable_pair_info");
 
-pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
-    let asset_infos = asset_infos.to_vec();
-    // Initialize return value
-    let mut key: Vec<u8> = Vec::new();
-    // Loop through all Vec<AssetInfoRaw> and append each AssetInfoRaw's bytes to the key
-    for asset_info in asset_infos.iter() {
-        key.append(&mut asset_info.as_bytes().to_vec());
-    }
-    // Return the key
-    key
+pub fn pair_key(asset_infos: &Vec<AssetInfoRaw>) -> Vec<u8> {
+    let mut asset_infos = asset_infos.to_vec();
+    asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+
+    asset_infos
+        .iter()
+        .map(|asset_info| asset_info.as_bytes())
+        .collect::<Vec<&[u8]>>()
+        .concat()
 }
