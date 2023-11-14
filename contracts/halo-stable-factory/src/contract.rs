@@ -244,16 +244,12 @@ pub fn query_stable_pairs(
     start_after: Option<Vec<AssetInfo>>,
     limit: Option<u32>,
 ) -> StdResult<StablePairsResponse> {
-    let start_after = if let Some(start_after) = start_after {
-        Some(
-            start_after
-                .iter()
-                .map(|asset_info| asset_info.to_raw(deps.api).unwrap())
-                .collect::<Vec<AssetInfoRaw>>(),
-        )
-    } else {
-        None
-    };
+    let start_after = start_after.map(|start_after| {
+        start_after
+            .iter()
+            .map(|asset_info| asset_info.to_raw(deps.api).unwrap())
+            .collect::<Vec<AssetInfoRaw>>()
+    });
 
     let stable_pairs: Vec<StablePairInfo> =
         read_stable_pairs(deps.storage, deps.api, start_after, limit)?;
