@@ -23,6 +23,7 @@ mod tests {
         use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
         use cw_multi_test::Executor;
         use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
+        use halo_stable_pair::state::StablePairsResponse;
         use halo_stable_pair::{
             math::AmpFactor,
             msg::Cw20StableHookMsg,
@@ -1430,6 +1431,365 @@ mod tests {
                         - 200_000_000u128 * ONE_UNIT_OF_DECIMAL_18
                         + 10_000_403_317_233_000_000_000_000u128 // 10_000_000 BUSD received from the stable pair
                 ),
+            );
+        }
+
+        // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
+        // Provide liquidity to the pair (1 USDC, 1 USDT, 1 BUSD)
+        // Create a stable swap pair with 3 tokens USDC, USDT, DAI
+        // Provide liquidity to the stable pair (1 USDC, 1 USDT, 1 HALO)
+        // Query ConfigResponse
+        // Query StablePairsResponse
+        // Query StablePairInfo for (1 USDC, 1 USDT, 1 BUSD) pair
+
+        #[test]
+        fn test_query_pairs_msgs() {
+            // get integration test app and contracts
+            let (mut app, contracts) = instantiate_contracts();
+            // get the stable factory contract
+            let stable_factory_contract = &contracts[0].contract_addr.clone();
+            // get the HALO token contract
+            let halo_token_contract = &contracts[1].contract_addr.clone();
+            // get the USDC contract
+            let usdc_token_contract = &contracts[2].contract_addr.clone();
+            // get the USDT contract
+            let usdt_token_contract = &contracts[3].contract_addr.clone();
+            // get the BUSD contract
+            let busd_token_contract = &contracts[4].contract_addr.clone();
+            // get current block time
+            let current_block_time = app.block_info().time.seconds();
+            // mint 1_000_000_000 USDC token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_USDC.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdc_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // mint 1_000_000_000 USDT token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_USDT.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdt_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // mint 1_000_000_000 BUSD token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_BUSD.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(busd_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // create stable pair USDC, USDT, BUSD
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: usdc_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: usdt_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: busd_token_contract.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: None,
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // query stable pair info
+            let response: StablePairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::StablePair {
+                        asset_infos: vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert stable pair info
+            assert_eq!(
+                response,
+                StablePairInfo {
+                    contract_addr: "contract5".to_string(),
+                    liquidity_token: "contract6".to_string(),
+                    asset_infos: vec![
+                        AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                    ],
+                    asset_decimals: vec![18, 18, 18],
+                    requirements: CreateStablePairRequirements {
+                        whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                        asset_minimum: vec![
+                            Uint128::from(1u128),
+                            Uint128::from(1u128),
+                            Uint128::from(1u128)
+                        ],
+                    },
+                    commission_rate: Decimal256::from_str("0.003").unwrap(),
+                }
+            );
+
+            // create stable pair USDC, USDT, HALO
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: usdc_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: usdt_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: halo_token_contract.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: None,
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-Halo-LP-Token".to_string(),
+                    lp_token_symbol: "SLP-HALO".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // query stable pair info
+            let response: StablePairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::StablePair {
+                        asset_infos: vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: halo_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert stable pair info
+            assert_eq!(
+                response,
+                StablePairInfo {
+                    contract_addr: "contract7".to_string(),
+                    liquidity_token: "contract8".to_string(),
+                    asset_infos: vec![
+                        AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: halo_token_contract.clone(),
+                        },
+                    ],
+                    asset_decimals: vec![18, 18, 18],
+                    requirements: CreateStablePairRequirements {
+                        whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                        asset_minimum: vec![
+                            Uint128::from(1u128),
+                            Uint128::from(1u128),
+                            Uint128::from(1u128)
+                        ],
+                    },
+                    commission_rate: Decimal256::from_str("0.003").unwrap(),
+                }
+            );
+
+            // query stable pairs
+            let response: StablePairsResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::StablePairs {
+                        start_after: None,
+                        limit: None,
+                    },
+                )
+                .unwrap();
+
+            // Assert stable pairs
+            assert_eq!(
+                response,
+                StablePairsResponse {
+                    pairs: vec![
+                        StablePairInfo {
+                            contract_addr: "contract7".to_string(),
+                            liquidity_token: "contract8".to_string(),
+                            asset_infos: vec![
+                                AssetInfo::Token {
+                                    contract_addr: usdc_token_contract.clone(),
+                                },
+                                AssetInfo::Token {
+                                    contract_addr: usdt_token_contract.clone(),
+                                },
+                                AssetInfo::Token {
+                                    contract_addr: halo_token_contract.clone(),
+                                },
+                            ],
+                            asset_decimals: vec![18, 18, 18],
+                            requirements: CreateStablePairRequirements {
+                                whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                                asset_minimum: vec![
+                                    Uint128::from(1u128),
+                                    Uint128::from(1u128),
+                                    Uint128::from(1u128)
+                                ],
+                            },
+                            commission_rate: Decimal256::from_str("0.003").unwrap(),
+                        },
+                        StablePairInfo {
+                            contract_addr: "contract5".to_string(),
+                            liquidity_token: "contract6".to_string(),
+                            asset_infos: vec![
+                                AssetInfo::Token {
+                                    contract_addr: usdc_token_contract.clone(),
+                                },
+                                AssetInfo::Token {
+                                    contract_addr: usdt_token_contract.clone(),
+                                },
+                                AssetInfo::Token {
+                                    contract_addr: busd_token_contract.clone(),
+                                },
+                            ],
+                            asset_decimals: vec![18, 18, 18],
+                            requirements: CreateStablePairRequirements {
+                                whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                                asset_minimum: vec![
+                                    Uint128::from(1u128),
+                                    Uint128::from(1u128),
+                                    Uint128::from(1u128)
+                                ],
+                            },
+                            commission_rate: Decimal256::from_str("0.003").unwrap(),
+                        },
+                    ],
+                }
             );
         }
     }

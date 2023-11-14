@@ -33,6 +33,11 @@ pub struct StablePairInfo {
 }
 
 #[cw_serde]
+pub struct StablePairsResponse {
+    pub pairs: Vec<StablePairInfo>,
+}
+
+#[cw_serde]
 pub struct StablePairInfoRaw {
     pub asset_infos: Vec<AssetInfoRaw>,
     pub contract_addr: Addr,

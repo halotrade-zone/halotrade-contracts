@@ -2,7 +2,7 @@ use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use halo_stable_pair::{
     math::AmpFactor,
-    state::{CreateStablePairRequirements, StablePairInfo},
+    state::{CreateStablePairRequirements, StablePairInfo, StablePairsResponse},
 };
 use haloswap::asset::{AssetInfo, LPTokenInfo};
 
@@ -37,6 +37,11 @@ pub enum QueryMsg {
     Config {},
     #[returns(StablePairInfo)]
     StablePair { asset_infos: Vec<AssetInfo> },
+    #[returns(StablePairsResponse)]
+    StablePairs {
+        start_after: Option<Vec<AssetInfo>>,
+        limit: Option<u32>,
+    },
 }
 
 // We define a custom struct for each query response

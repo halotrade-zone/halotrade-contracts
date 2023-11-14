@@ -12,13 +12,14 @@ use cw_utils::parse_reply_instantiate_data;
 use halo_stable_pair::math::AmpFactor;
 use halo_stable_pair::msg::InstantiateMsg as StablePairInstantiateMsg;
 use halo_stable_pair::state::{
-    CreateStablePairRequirements, StablePairInfo, StablePairInfoRaw, DEFAULT_COMMISSION_RATE,
+    CreateStablePairRequirements, StablePairInfo, StablePairInfoRaw, StablePairsResponse,
+    DEFAULT_COMMISSION_RATE,
 };
 use haloswap::asset::{AssetInfo, AssetInfoRaw, LPTokenInfo};
 
 use crate::msg::{ConfigResponse, QueryMsg};
 use crate::query::query_stable_pair_info_from_stable_pairs;
-use crate::state::STABLE_PAIRS;
+use crate::state::{read_stable_pairs, STABLE_PAIRS};
 use crate::{
     msg::{ExecuteMsg, InstantiateMsg},
     state::{pair_key, Config, TmpStablePairInfo, CONFIG, TMP_STABLE_PAIR_INFO},
@@ -210,6 +211,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::StablePair { asset_infos } => to_binary(&query_stable_pair(deps, asset_infos)?),
+        QueryMsg::StablePairs { start_after, limit } => {
+            to_binary(&query_stable_pairs(deps, start_after, limit)?)
+        }
     }
 }
 
@@ -233,4 +237,29 @@ pub fn query_stable_pair(deps: Deps, asset_infos: Vec<AssetInfo>) -> StdResult<S
     );
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIRS.load(deps.storage, &stable_pair_key)?;
     stable_pair_info.to_normal(deps.api)
+}
+
+pub fn query_stable_pairs(
+    deps: Deps,
+    start_after: Option<Vec<AssetInfo>>,
+    limit: Option<u32>,
+) -> StdResult<StablePairsResponse> {
+    let start_after = if let Some(start_after) = start_after {
+        Some(
+            start_after
+                .iter()
+                .map(|asset_info| asset_info.to_raw(deps.api).unwrap())
+                .collect::<Vec<AssetInfoRaw>>(),
+        )
+    } else {
+        None
+    };
+
+    let stable_pairs: Vec<StablePairInfo> =
+        read_stable_pairs(deps.storage, deps.api, start_after, limit)?;
+    let resp = StablePairsResponse {
+        pairs: stable_pairs,
+    };
+
+    Ok(resp)
 }
