@@ -23,8 +23,8 @@ use crate::{
     math::AmpFactor,
     msg::{Cw20StableHookMsg, ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{
-        decrease_decimals, increase_decimals, Config, StablePairInfoRaw, AMP_FACTOR_INFO,
-        COMMISSION_RATE_INFO, CONFIG, STABLE_PAIR_INFO,
+        decrease_decimals, increase_decimals, Config, StablePairInfo, StablePairInfoRaw,
+        AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG, STABLE_PAIR_INFO,
     },
 };
 
@@ -720,9 +720,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 /// Query stable pair info
-pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfoRaw> {
+pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfo> {
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
-    Ok(stable_pair_info)
+    stable_pair_info.to_normal(deps.api)
 }
 
 pub fn query_stable_simulation(
