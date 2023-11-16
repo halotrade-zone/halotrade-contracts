@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -302,7 +300,7 @@ pub fn provide_liquidity(
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
 
     if total_share == Uint128::zero() {
-        // mint amount of 'share' LP token to the receiver
+        // mint LP_TOKEN_RESERVED_AMOUNT to the pair contract
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: deps
                 .api
@@ -591,6 +589,8 @@ pub fn stable_swap(
     to: Option<Addr>,
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
+    // Commission rate OR Fee amount for framework
+    let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
     // Get stable pair info
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
@@ -610,7 +610,6 @@ pub fn stable_swap(
         offer_asset_amount,
         stable_pair_info.asset_decimals[offer_asset_index],
     );
-    let mut messages: Vec<CosmosMsg> = vec![];
     // Get index of ask asset
     let ask_asset_index = pairs
         .iter()
@@ -625,9 +624,9 @@ pub fn stable_swap(
     old_c_amounts[offer_asset_index] = old_c_amounts[offer_asset_index]
         .checked_sub(offer_asset.amount)
         .unwrap();
-
     let _ask_pool: Uint128 = old_c_amounts[ask_asset_index];
     let _offer_pool: Uint128 = old_c_amounts[offer_asset_index];
+
     // Decrease decimals of the old_c_amounts to prevent overflow
     old_c_amounts = old_c_amounts
         .iter()
@@ -642,7 +641,7 @@ pub fn stable_swap(
             offer_asset_amount,
             ask_asset_index,
             &old_c_amounts,
-            Decimal256::from_str("0.003").unwrap(),
+            commission_rate,
         )
         .unwrap();
 
@@ -679,7 +678,7 @@ pub fn stable_swap(
     // )?;
 
     let receiver = to.unwrap_or_else(|| sender.clone());
-
+    let mut messages: Vec<CosmosMsg> = vec![];
     // Send the amount of assets that user will receive to the sender
     if !return_amount.is_zero() {
         messages.push(return_asset.into_msg(receiver.clone())?);
@@ -704,6 +703,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             ask_asset,
         } => Ok(to_binary(&query_stable_simulation(
             deps,
+            env,
             offer_asset,
             ask_asset,
         )?)?),
@@ -727,41 +727,36 @@ pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfo> {
 
 pub fn query_stable_simulation(
     deps: Deps,
+    env: Env,
     offer_asset: Asset,
     ask_asset: AssetInfo,
 ) -> Result<SimulationResponse, ContractError> {
-    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
-
-    let contract_addr = deps
-        .api
-        .addr_validate(stable_pair_info.contract_addr.as_ref())?;
-    // get pair info of the stable pair contract
-    let pairs: Vec<Asset> = stable_pair_info.query_pairs(&deps.querier, deps.api, contract_addr)?;
     // Commission rate OR Fee amount for framework
     let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
-    // Get AMP factor info
+    // Get stable pair info
+    let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
+    // Get the amount of assets in the stable pair
+    let pairs: Vec<Asset> =
+        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+    // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
-
-    // Get offer asset index
+    // Get index of offer asset
     let offer_asset_index = pairs
         .iter()
         .position(|pair| pair.info == offer_asset.info)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
-
-    // Get offer asset amount
-    let offer_asset_amount = offer_asset.amount;
+    // Get amount of offer asset
+    let offer_asset_amount: Uint128 = offer_asset.amount;
     // Decrease decimals of the offer_asset_amount to prevent overflow
-    let offer_asset_amount = decrease_decimals(
+    let offer_asset_amount: Uint128 = decrease_decimals(
         offer_asset_amount,
         stable_pair_info.asset_decimals[offer_asset_index],
     );
-
-    // Get ask asset index
+    // Get index of ask asset
     let ask_asset_index = pairs
         .iter()
         .position(|pair| pair.info == ask_asset)
         .ok_or_else(|| ContractError::Std(StdError::generic_err("Invalid asset")))?;
-
     // Get the amount of assets in the stable pair
     let old_c_amounts: Vec<Uint128> = pairs
         .iter()
@@ -824,23 +819,11 @@ pub fn query_provide_liquidity_simulation(
                 .expect("Wrong asset info is given")
         })
         .collect();
-    // Decrease decimals of the deposits to prevent overflow
-    let deposits = deposits
-        .iter()
-        .zip(stable_pair_info.asset_decimals.iter())
-        .map(|(deposit, decimals)| decrease_decimals(*deposit, *decimals))
-        .collect::<Vec<Uint128>>();
 
     // get current total amount of assets in the stable pair
     let old_c_amounts: Vec<Uint128> = pairs
         .iter()
         .map(|pair| pair.amount)
-        .collect::<Vec<Uint128>>();
-    // Decrease decimals of the old_c_amounts to prevent overflow
-    let old_c_amounts = old_c_amounts
-        .iter()
-        .zip(stable_pair_info.asset_decimals.iter())
-        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
         .collect::<Vec<Uint128>>();
 
     // get the address of the LP token
@@ -851,16 +834,31 @@ pub fn query_provide_liquidity_simulation(
     // get total supply of the LP token
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
 
+    // Decrease decimals of the deposits to prevent overflow
+    let deposits = deposits
+        .iter()
+        .zip(stable_pair_info.asset_decimals.iter())
+        .map(|(deposit, decimals)| decrease_decimals(*deposit, *decimals))
+        .collect::<Vec<Uint128>>();
+
+    // Decrease decimals of the old_c_amounts to prevent overflow
+    let old_c_amounts = old_c_amounts
+        .iter()
+        .zip(stable_pair_info.asset_decimals.iter())
+        .map(|(old_c_amount, decimals)| decrease_decimals(*old_c_amount, *decimals))
+        .collect::<Vec<Uint128>>();
+
     // calculate the amount of LP token is minted to the user
-    let share = amp_factor_info
+    let mut share = amp_factor_info
         .compute_lp_amount_for_deposit(&deposits, &old_c_amounts, total_share, Uint128::zero())
         .unwrap()
         .0;
-    // prevent providing free token (one of the deposits is zero)
-    if share.is_zero() {
-        return Err(ContractError::Std(StdError::generic_err(
-            "Share amount is zero",
-        )));
+
+    if total_share == Uint128::zero() {
+        // mint LP_TOKEN_RESERVED_AMOUNT to the pair contract
+        share = share
+            .checked_sub(Uint128::from(LP_TOKEN_RESERVED_AMOUNT))
+            .unwrap();
     }
 
     Ok(share)
@@ -870,7 +868,7 @@ pub fn query_remove_liquidity_by_share_simulation(
     deps: Deps,
     env: Env,
     share: Uint128,
-) -> Result<Vec<Uint128>, ContractError> {
+) -> Result<Vec<Asset>, ContractError> {
     // Get stable pair info
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get total supply of the LP token
@@ -896,13 +894,16 @@ pub fn query_remove_liquidity_by_share_simulation(
         })
         .collect::<StdResult<Vec<Uint128>>>()?;
 
-    // Increase decimals of the assets_amount back to the original decimals
-    let assets_amount = assets_amount
+    // Return the assets that user will receive
+    Ok(pairs
         .iter()
-        .zip(stable_pair_info.asset_decimals.iter())
-        .map(|(asset_amount, decimals)| increase_decimals(*asset_amount, *decimals))
-        .collect::<Vec<Uint128>>();
-    Ok(assets_amount)
+        .zip(assets_amount.iter())
+        .map(|(pair, asset_amount)| Asset {
+            info: pair.info.clone(),
+            amount: *asset_amount,
+        })
+        .collect::<Vec<Asset>>())
+
 }
 
 pub fn query_remove_liquidity_by_token_simulation(

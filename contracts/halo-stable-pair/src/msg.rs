@@ -77,7 +77,7 @@ pub enum QueryMsg {
     },
     #[returns(Uint128)]
     ProvideLiquiditySimulation { assets: Vec<Asset> },
-    #[returns(Vec<Uint128>)]
+    #[returns(Vec<Asset>)]
     RemoveLiquidityByShareSimulation { share: Uint128 },
     #[returns(Uint128)]
     RemoveLiquidityByTokenSimulation { assets: Vec<Asset> },

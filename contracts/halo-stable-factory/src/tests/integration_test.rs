@@ -9,6 +9,8 @@ mod tests {
     const MOCK_1_000_000_000_BUSD: u128 = 1_000_000_000_000_000_000_000_000_000u128;
     // Decimal 18 macro
     const ONE_UNIT_OF_DECIMAL_18: u128 = 1_000_000_000_000_000_000u128;
+    // Decimal 6 macro
+    const ONE_UNIT_OF_DECIMAL_6: u128 = 1_000_000u128;
 
     const MOCK_TRANSACTION_FEE: u128 = 5000;
     mod execute_contract_native_with_cw20_token {
@@ -22,7 +24,9 @@ mod tests {
         use cosmwasm_std::{to_binary, Addr, Coin, Uint128};
         use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
         use cw_multi_test::Executor;
-        use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
+        use halo_stable_pair::msg::{
+            ExecuteMsg as StablePairExecuteMsg, QueryMsg as StablePairQueryMsg,
+        };
         use halo_stable_pair::state::StablePairsResponse;
         use halo_stable_pair::{
             math::AmpFactor,
@@ -30,6 +34,7 @@ mod tests {
             state::{CreateStablePairRequirements, StablePairInfo},
         };
         use haloswap::asset::{Asset, AssetInfo, LPTokenInfo};
+        use haloswap::pair::SimulationResponse;
 
         use super::*;
         // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
@@ -1790,6 +1795,756 @@ mod tests {
                         },
                     ],
                 }
+            );
+        }
+
+        // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
+        // ADMIN query ProvideLiquiditySimulation for (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+        // Provide liquidity to the pair (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+        // -> The LP token amount should be equal to the simulation result (500_000 LP tokens)
+        // ADMIN query StableSimulation for 100 USDC to USDT
+        // ADMIN swap 100 USDC to USDT
+        // -> The result should be equal to the StableSimulation result (100 USDT)
+        // ADMIN query RemoveLiquidityByShareSimulation for 1000 LP tokens
+        // ADMIN remove 100_000 LP tokens
+        // -> The result should be equal to the RemoveLiquidityByShareSimulation result
+        // ADMIN query RemoveLiquidityByTokenSimulation for (100 USDC, 200 USDT, 200 BUSD)
+        // ADMIN remove 100 USDC, 200 USDT, 200 BUSD
+        // -> The result should be equal to the RemoveLiquidityByTokenSimulation result
+        #[test]
+        fn test_query_simulation() {
+            // get integration test app and contracts
+            let (mut app, contracts) = instantiate_contracts();
+            // get the stable factory contract
+            let stable_factory_contract = &contracts[0].contract_addr.clone();
+            // get the USDC contract
+            let usdc_token_contract = &contracts[2].contract_addr.clone();
+            // get the USDT contract
+            let usdt_token_contract = &contracts[3].contract_addr.clone();
+            // get the BUSD contract
+            let busd_token_contract = &contracts[4].contract_addr.clone();
+            // get current block time
+            let current_block_time = app.block_info().time.seconds();
+            // mint 1_000_000_000 USDC token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_USDC.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdc_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // mint 1_000_000_000 USDT token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_USDT.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdt_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // mint 1_000_000_000 BUSD token to ADMIN
+            let mint_msg = Cw20ExecuteMsg::Mint {
+                recipient: ADMIN.to_string(),
+                amount: MOCK_1_000_000_000_BUSD.into(),
+            };
+
+            // Execute minting
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(busd_token_contract.clone()),
+                &mint_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // create stable pair USDC, USDT, BUSD
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: usdc_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: usdt_token_contract.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: busd_token_contract.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: None,
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // query stable pair info
+            let response: StablePairInfo = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::StablePair {
+                        asset_infos: vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                        ],
+                    },
+                )
+                .unwrap();
+
+            // Assert stable pair info
+            assert_eq!(
+                response,
+                StablePairInfo {
+                    contract_addr: "contract5".to_string(),
+                    liquidity_token: "contract6".to_string(),
+                    asset_infos: vec![
+                        AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                    ],
+                    asset_decimals: vec![18, 18, 18],
+                    requirements: CreateStablePairRequirements {
+                        whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                        asset_minimum: vec![
+                            Uint128::from(1u128),
+                            Uint128::from(1u128),
+                            Uint128::from(1u128)
+                        ],
+                    },
+                    commission_rate: Decimal256::from_str("0.003").unwrap(),
+                }
+            );
+
+            // increase allowance for stable pair contract
+            let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+                spender: response.contract_addr,
+                amount: Uint128::from(1_000_000_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                expires: None,
+            };
+
+            // Execute increase allowance for USDC
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdc_token_contract.clone()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Execute increase allowance for USDT
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdt_token_contract.clone()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Execute increase allowance for BUSD
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(busd_token_contract.clone()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // ADMIN query ProvideLiquiditySimulation for (100_000 USDC, 200_000 USDT, 200_000 BUSD)
+            let provide_liquidity_simulation_msg = StablePairQueryMsg::ProvideLiquiditySimulation {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                ],
+            };
+
+            // Execute query ProvideLiquiditySimulation
+            let response_provide_500_000_usd: Uint128 = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked("contract5".to_string()),
+                    &provide_liquidity_simulation_msg,
+                )
+                .unwrap();
+
+            // assert ProvideLiquiditySimulation result
+            assert_eq!(
+                response_provide_500_000_usd,
+                Uint128::from(499_998_542_620u128)
+            );
+
+            // provide liquidity to the pair
+            let provide_liquidity_msg = StablePairExecuteMsg::ProvideLiquidity {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            };
+
+            // Execute provide liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &provide_liquidity_msg,
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM_2.to_string(),
+                }],
+            );
+
+            assert!(response.is_ok());
+
+            // Query LP token balance of ADMIN
+            let lp_token_balance: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert LP token balance of ADMIN
+            assert_eq!(
+                lp_token_balance.balance,
+                Uint128::from(response_provide_500_000_usd)
+            );
+
+            // Query USDC Balance of ADMIN before swap
+            let usdc_balance_before_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDC Balance of ADMIN before swap
+            assert_eq!(
+                usdc_balance_before_swap.balance,
+                Uint128::from(MOCK_1_000_000_000_USDC - 100_000u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // Query USDT Balance of ADMIN before swap
+            let usdt_balance_before_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdt_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDT Balance of ADMIN before swap
+            assert_eq!(
+                usdt_balance_before_swap.balance,
+                Uint128::from(MOCK_1_000_000_000_USDT - 200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // Query BUSD Balance of ADMIN before swap
+            let busd_balance_before_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    busd_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert BUSD Balance of ADMIN before swap
+            assert_eq!(
+                busd_balance_before_swap.balance,
+                Uint128::from(MOCK_1_000_000_000_BUSD - 200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // ADMIN query StableSimulation for 100 USDC to USDT
+            let stable_simulation_msg = StablePairQueryMsg::StableSimulation {
+                offer_asset: Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: usdc_token_contract.clone(),
+                    },
+                    amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+                },
+                ask_asset: AssetInfo::Token {
+                    contract_addr: usdt_token_contract.clone(),
+                },
+            };
+
+            // Execute query StableSimulation
+            let response_stable_simulation_100_usd: SimulationResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked("contract5".to_string()),
+                    &stable_simulation_msg,
+                )
+                .unwrap();
+
+            // assert StableSimulation result
+            assert_eq!(
+                response_stable_simulation_100_usd.return_amount,
+                Uint128::from(100_005_349_000_000_000_000u128)
+            );
+
+            // ADMIN swap 100 USDC to USDT
+            let swap_msg = StablePairExecuteMsg::StableSwap {
+                offer_asset: Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: usdc_token_contract.clone(),
+                    },
+                    amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+                },
+                ask_asset: AssetInfo::Token {
+                    contract_addr: usdt_token_contract.clone(),
+                },
+                max_spread: None,
+                belief_price: None,
+                to: None,
+            };
+
+            // Send 100 USDC to stable pair contract to swap
+            let send_msg = Cw20ExecuteMsg::Send {
+                contract: "contract5".to_string(),
+                amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+                msg: to_binary(&swap_msg).unwrap(),
+            };
+
+            // Execute send
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdc_token_contract.clone()),
+                &send_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Query USDC Balance of ADMIN after swap
+            let usdc_balance_after_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDC Balance of ADMIN after swap
+            assert_eq!(
+                usdc_balance_after_swap.balance,
+                usdc_balance_before_swap.balance - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // Query USDT Balance of ADMIN after swap
+            let usdt_balance_after_swap: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdt_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDT Balance of ADMIN after swap
+            assert_eq!(
+                usdt_balance_after_swap.balance,
+                usdt_balance_before_swap.balance + response_stable_simulation_100_usd.return_amount,
+            );
+
+            // ADMIN query RemoveLiquidityByShareSimulation for 1000 LP tokens
+            let remove_liquidity_by_share_simulation_msg =
+                StablePairQueryMsg::RemoveLiquidityByShareSimulation {
+                    share: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
+                };
+
+            // Execute query RemoveLiquidityByShareSimulation
+            let response_remove_liquidity_by_share_simulation_1000_lp: Vec<Asset> = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked("contract5".to_string()),
+                    &remove_liquidity_by_share_simulation_msg,
+                )
+                .unwrap();
+
+            // assert RemoveLiquidityByShareSimulation result
+            assert_eq!(
+                response_remove_liquidity_by_share_simulation_1000_lp,
+                vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(20_020_058_353_625_246_696_016u128), // 20_000 USDC
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(39_980_115_462_561_385_424_498u128), // 40_000 USDT
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(40_000_116_590_659_833_558_475u128), // 40_000 BUSD
+                    },
+                ]
+            );
+
+            // ADMIN remove 100_000 LP tokens
+            let remove_liquidity_by_share_msg = Cw20StableHookMsg::RemoveLiquidityByShare {
+                share: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
+                assets_min_amount: None,
+            };
+
+            // Send 100_000 LP tokens to stable pair contract to remove liquidity
+            let send_msg = Cw20ExecuteMsg::Send {
+                contract: "contract5".to_string(),
+                amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
+                msg: to_binary(&remove_liquidity_by_share_msg).unwrap(),
+            };
+
+            // Execute send
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract6".to_string()),
+                &send_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Query USDC Balance of ADMIN after remove liquidity
+            let usdc_balance_after_remove_liquidity: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDC Balance of ADMIN after remove liquidity
+            assert_eq!(
+                usdc_balance_after_remove_liquidity.balance,
+                usdc_balance_before_swap.balance - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18)
+                    + response_remove_liquidity_by_share_simulation_1000_lp[0].amount,
+            );
+
+            // Query USDT Balance of ADMIN after remove liquidity
+            let usdt_balance_after_remove_liquidity: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdt_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDT Balance of ADMIN after remove liquidity
+            assert_eq!(
+                usdt_balance_after_remove_liquidity.balance,
+                usdt_balance_after_swap.balance
+                    + response_remove_liquidity_by_share_simulation_1000_lp[1].amount,
+            );
+
+            // Query BUSD Balance of ADMIN after remove liquidity
+            let busd_balance_after_remove_liquidity: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    busd_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert BUSD Balance of ADMIN after remove liquidity
+            assert_eq!(
+                busd_balance_after_remove_liquidity.balance,
+                busd_balance_before_swap.balance
+                    + response_remove_liquidity_by_share_simulation_1000_lp[2].amount,
+            );
+
+            // ADMIN query RemoveLiquidityByTokenSimulation for (100 USDC, 200 USDT, 200 BUSD)
+            let remove_liquidity_by_token_simulation_msg =
+                StablePairQueryMsg::RemoveLiquidityByTokenSimulation {
+                    assets: vec![
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            amount: Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                            amount: Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                    ],
+                };
+
+            // Execute query RemoveLiquidityByTokenSimulation
+            let response_remove_liquidity_by_token_simulation_100_usd_200_usdt_200_busd: Uint128 =
+                app.wrap()
+                    .query_wasm_smart(
+                        Addr::unchecked("contract5".to_string()),
+                        &remove_liquidity_by_token_simulation_msg,
+                    )
+                    .unwrap();
+
+            // assert RemoveLiquidityByTokenSimulation result
+            assert_eq!(
+                response_remove_liquidity_by_token_simulation_100_usd_200_usdt_200_busd,
+                Uint128::from(499_998_542u128)
+            );
+
+            // Increase allowance LP token contract for stable pair contract
+            let increase_allowance_msg = Cw20ExecuteMsg::IncreaseAllowance {
+                spender: "contract5".to_string(),
+                amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
+                expires: None,
+            };
+
+            // Execute increase allowance for LP token contract
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract6".to_string()),
+                &increase_allowance_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+            // ADMIN remove 100 USDC, 200 USDT, 200 BUSD
+            let remove_liquidity_by_token_msg = StablePairExecuteMsg::RemoveLiquidityByToken {
+                assets: vec![
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdc_token_contract.clone(),
+                        },
+                        amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                    Asset {
+                        info: AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                        amount: Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
+                    },
+                ],
+                max_burn_share: None,
+            };
+
+            // Execute remove liquidity
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked("contract5".to_string()),
+                &remove_liquidity_by_token_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Query USDC Balance of ADMIN after remove liquidity
+            let usdc_balance_after_remove_liquidity: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdc_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDC Balance of ADMIN after remove liquidity
+            assert_eq!(
+                usdc_balance_after_remove_liquidity.balance,
+                usdc_balance_before_swap.balance - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18)
+                    + response_remove_liquidity_by_share_simulation_1000_lp[0].amount
+                    + Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // Query USDT Balance of ADMIN after remove liquidity
+            let usdt_balance_after_remove_liquidity: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    usdt_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert USDT Balance of ADMIN after remove liquidity
+            assert_eq!(
+                usdt_balance_after_remove_liquidity.balance,
+                usdt_balance_after_swap.balance
+                    + response_remove_liquidity_by_share_simulation_1000_lp[1].amount
+                    + Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // Query BUSD Balance of ADMIN after remove liquidity
+            let busd_balance_after_remove_liquidity: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    busd_token_contract.clone(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert BUSD Balance of ADMIN after remove liquidity
+            assert_eq!(
+                busd_balance_after_remove_liquidity.balance,
+                busd_balance_before_swap.balance
+                    + response_remove_liquidity_by_share_simulation_1000_lp[2].amount
+                    + Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
+            );
+
+            // Query LP token balance of ADMIN after remove liquidity
+            let lp_token_balance: BalanceResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    "contract6".to_string(),
+                    &Cw20QueryMsg::Balance {
+                        address: ADMIN.to_string(),
+                    },
+                )
+                .unwrap();
+
+            // assert LP token balance of ADMIN after remove liquidity
+            assert_eq!(
+                lp_token_balance.balance,
+                Uint128::from(response_provide_500_000_usd)
+                    - response_remove_liquidity_by_token_simulation_100_usd_200_usdt_200_busd
+                    - Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6)
             );
         }
     }
