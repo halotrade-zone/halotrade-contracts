@@ -2112,10 +2112,7 @@ mod tests {
                 .unwrap();
 
             // assert LP token balance of ADMIN
-            assert_eq!(
-                lp_token_balance.balance,
-                Uint128::from(response_provide_500_000_usd)
-            );
+            assert_eq!(lp_token_balance.balance, response_provide_500_000_usd);
 
             // Query USDC Balance of ADMIN before swap
             let usdc_balance_before_swap: BalanceResponse = app
@@ -2542,7 +2539,7 @@ mod tests {
             // assert LP token balance of ADMIN after withdraw liquidity
             assert_eq!(
                 lp_token_balance.balance,
-                Uint128::from(response_provide_500_000_usd)
+                response_provide_500_000_usd
                     - response_withdraw_liquidity_by_token_simulation_100_usd_200_usdt_200_busd
                     - Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6)
             );
