@@ -40,9 +40,9 @@ mod tests {
         // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
         // Provide liquidity to the pair (1 USDC, 1 USDT, 1 BUSD)
         // Provide liquidity to the pair one more time (100_000 USDC, 200_000 USDT, 200_000 BUSD)
-        // Remove liquidity by Share from the pair by 50% of Share (250_000 LP Token)
+        // Withdraw liquidity by Share from the pair by 50% of Share (250_000 LP Token)
         // -> ADMIN should get (50_000.5 USDC, 100_000.5 USDT, 100_000.5 BUSD)
-        // Remove liquidity by Token from the pair by 25_000 USDC, 50_000 USDT, 50_000 BUSD
+        // Withdraw liquidity by Token from the pair by 25_000 USDC, 50_000 USDT, 50_000 BUSD
         // -> ADMIN should get (25_000 USDC, 50_000 USDT, 50_000 BUSD) and burn 125_000 LP Token
         #[test]
         fn test_add_liquidity_pair_3_tokens() {
@@ -389,7 +389,7 @@ mod tests {
             assert!(response.is_ok());
 
             // Withdraw liquidity by share from the pair
-            let withdraw_liquidity_msg = Cw20StableHookMsg::RemoveLiquidityByShare {
+            let withdraw_liquidity_msg = Cw20StableHookMsg::WithdrawLiquidityByShare {
                 share: Uint128::from(250_000_771_316u128),
                 assets_min_amount: None,
             };
@@ -503,7 +503,7 @@ mod tests {
             );
 
             // Withdraw liquidity by token from the pair
-            let withdraw_liquidity_msg = StablePairExecuteMsg::RemoveLiquidityByToken {
+            let withdraw_liquidity_msg = StablePairExecuteMsg::WithdrawLiquidityByToken {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -1805,12 +1805,12 @@ mod tests {
         // ADMIN query StableSimulation for 100 USDC to USDT
         // ADMIN swap 100 USDC to USDT
         // -> The result should be equal to the StableSimulation result (100 USDT)
-        // ADMIN query RemoveLiquidityByShareSimulation for 1000 LP tokens
+        // ADMIN query WithdrawLiquidityByShareSimulation for 1000 LP tokens
         // ADMIN remove 100_000 LP tokens
-        // -> The result should be equal to the RemoveLiquidityByShareSimulation result
-        // ADMIN query RemoveLiquidityByTokenSimulation for (100 USDC, 200 USDT, 200 BUSD)
+        // -> The result should be equal to the WithdrawLiquidityByShareSimulation result
+        // ADMIN query WithdrawLiquidityByTokenSimulation for (100 USDC, 200 USDT, 200 BUSD)
         // ADMIN remove 100 USDC, 200 USDT, 200 BUSD
-        // -> The result should be equal to the RemoveLiquidityByTokenSimulation result
+        // -> The result should be equal to the WithdrawLiquidityByTokenSimulation result
         #[test]
         fn test_query_simulation() {
             // get integration test app and contracts
@@ -2263,24 +2263,24 @@ mod tests {
                 usdt_balance_before_swap.balance + response_stable_simulation_100_usd.return_amount,
             );
 
-            // ADMIN query RemoveLiquidityByShareSimulation for 1000 LP tokens
-            let remove_liquidity_by_share_simulation_msg =
-                StablePairQueryMsg::RemoveLiquidityByShareSimulation {
+            // ADMIN query WithdrawLiquidityByShareSimulation for 1000 LP tokens
+            let withdraw_liquidity_by_share_simulation_msg =
+                StablePairQueryMsg::WithdrawLiquidityByShareSimulation {
                     share: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
                 };
 
-            // Execute query RemoveLiquidityByShareSimulation
-            let response_remove_liquidity_by_share_simulation_1000_lp: Vec<Asset> = app
+            // Execute query WithdrawLiquidityByShareSimulation
+            let response_withdraw_liquidity_by_share_simulation_1000_lp: Vec<Asset> = app
                 .wrap()
                 .query_wasm_smart(
                     Addr::unchecked("contract5".to_string()),
-                    &remove_liquidity_by_share_simulation_msg,
+                    &withdraw_liquidity_by_share_simulation_msg,
                 )
                 .unwrap();
 
-            // assert RemoveLiquidityByShareSimulation result
+            // assert WithdrawLiquidityByShareSimulation result
             assert_eq!(
-                response_remove_liquidity_by_share_simulation_1000_lp,
+                response_withdraw_liquidity_by_share_simulation_1000_lp,
                 vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -2304,16 +2304,16 @@ mod tests {
             );
 
             // ADMIN remove 100_000 LP tokens
-            let remove_liquidity_by_share_msg = Cw20StableHookMsg::RemoveLiquidityByShare {
+            let withdraw_liquidity_by_share_msg = Cw20StableHookMsg::WithdrawLiquidityByShare {
                 share: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
                 assets_min_amount: None,
             };
 
-            // Send 100_000 LP tokens to stable pair contract to remove liquidity
+            // Send 100_000 LP tokens to stable pair contract to withdraw liquidity
             let send_msg = Cw20ExecuteMsg::Send {
                 contract: "contract5".to_string(),
                 amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6),
-                msg: to_binary(&remove_liquidity_by_share_msg).unwrap(),
+                msg: to_binary(&withdraw_liquidity_by_share_msg).unwrap(),
             };
 
             // Execute send
@@ -2326,8 +2326,8 @@ mod tests {
 
             assert!(response.is_ok());
 
-            // Query USDC Balance of ADMIN after remove liquidity
-            let usdc_balance_after_remove_liquidity: BalanceResponse = app
+            // Query USDC Balance of ADMIN after withdraw liquidity
+            let usdc_balance_after_withdraw_liquidity: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
                     usdc_token_contract.clone(),
@@ -2337,15 +2337,15 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert USDC Balance of ADMIN after remove liquidity
+            // assert USDC Balance of ADMIN after withdraw liquidity
             assert_eq!(
-                usdc_balance_after_remove_liquidity.balance,
+                usdc_balance_after_withdraw_liquidity.balance,
                 usdc_balance_before_swap.balance - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18)
-                    + response_remove_liquidity_by_share_simulation_1000_lp[0].amount,
+                    + response_withdraw_liquidity_by_share_simulation_1000_lp[0].amount,
             );
 
-            // Query USDT Balance of ADMIN after remove liquidity
-            let usdt_balance_after_remove_liquidity: BalanceResponse = app
+            // Query USDT Balance of ADMIN after withdraw liquidity
+            let usdt_balance_after_withdraw_liquidity: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
                     usdt_token_contract.clone(),
@@ -2355,15 +2355,15 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert USDT Balance of ADMIN after remove liquidity
+            // assert USDT Balance of ADMIN after withdraw liquidity
             assert_eq!(
-                usdt_balance_after_remove_liquidity.balance,
+                usdt_balance_after_withdraw_liquidity.balance,
                 usdt_balance_after_swap.balance
-                    + response_remove_liquidity_by_share_simulation_1000_lp[1].amount,
+                    + response_withdraw_liquidity_by_share_simulation_1000_lp[1].amount,
             );
 
-            // Query BUSD Balance of ADMIN after remove liquidity
-            let busd_balance_after_remove_liquidity: BalanceResponse = app
+            // Query BUSD Balance of ADMIN after withdraw liquidity
+            let busd_balance_after_withdraw_liquidity: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
                     busd_token_contract.clone(),
@@ -2373,16 +2373,16 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert BUSD Balance of ADMIN after remove liquidity
+            // assert BUSD Balance of ADMIN after withdraw liquidity
             assert_eq!(
-                busd_balance_after_remove_liquidity.balance,
+                busd_balance_after_withdraw_liquidity.balance,
                 busd_balance_before_swap.balance
-                    + response_remove_liquidity_by_share_simulation_1000_lp[2].amount,
+                    + response_withdraw_liquidity_by_share_simulation_1000_lp[2].amount,
             );
 
-            // ADMIN query RemoveLiquidityByTokenSimulation for (100 USDC, 200 USDT, 200 BUSD)
-            let remove_liquidity_by_token_simulation_msg =
-                StablePairQueryMsg::RemoveLiquidityByTokenSimulation {
+            // ADMIN query WithdrawLiquidityByTokenSimulation for (100 USDC, 200 USDT, 200 BUSD)
+            let withdraw_liquidity_by_token_simulation_msg =
+                StablePairQueryMsg::WithdrawLiquidityByTokenSimulation {
                     assets: vec![
                         Asset {
                             info: AssetInfo::Token {
@@ -2405,18 +2405,18 @@ mod tests {
                     ],
                 };
 
-            // Execute query RemoveLiquidityByTokenSimulation
-            let response_remove_liquidity_by_token_simulation_100_usd_200_usdt_200_busd: Uint128 =
+            // Execute query WithdrawLiquidityByTokenSimulation
+            let response_withdraw_liquidity_by_token_simulation_100_usd_200_usdt_200_busd: Uint128 =
                 app.wrap()
                     .query_wasm_smart(
                         Addr::unchecked("contract5".to_string()),
-                        &remove_liquidity_by_token_simulation_msg,
+                        &withdraw_liquidity_by_token_simulation_msg,
                     )
                     .unwrap();
 
-            // assert RemoveLiquidityByTokenSimulation result
+            // assert WithdrawLiquidityByTokenSimulation result
             assert_eq!(
-                response_remove_liquidity_by_token_simulation_100_usd_200_usdt_200_busd,
+                response_withdraw_liquidity_by_token_simulation_100_usd_200_usdt_200_busd,
                 Uint128::from(499_998_542u128)
             );
 
@@ -2437,7 +2437,7 @@ mod tests {
 
             assert!(response.is_ok());
             // ADMIN remove 100 USDC, 200 USDT, 200 BUSD
-            let remove_liquidity_by_token_msg = StablePairExecuteMsg::RemoveLiquidityByToken {
+            let withdraw_liquidity_by_token_msg = StablePairExecuteMsg::WithdrawLiquidityByToken {
                 assets: vec![
                     Asset {
                         info: AssetInfo::Token {
@@ -2461,18 +2461,18 @@ mod tests {
                 max_burn_share: None,
             };
 
-            // Execute remove liquidity
+            // Execute withdraw liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked("contract5".to_string()),
-                &remove_liquidity_by_token_msg,
+                &withdraw_liquidity_by_token_msg,
                 &[],
             );
 
             assert!(response.is_ok());
 
-            // Query USDC Balance of ADMIN after remove liquidity
-            let usdc_balance_after_remove_liquidity: BalanceResponse = app
+            // Query USDC Balance of ADMIN after withdraw liquidity
+            let usdc_balance_after_withdraw_liquidity: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
                     usdc_token_contract.clone(),
@@ -2482,16 +2482,16 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert USDC Balance of ADMIN after remove liquidity
+            // assert USDC Balance of ADMIN after withdraw liquidity
             assert_eq!(
-                usdc_balance_after_remove_liquidity.balance,
+                usdc_balance_after_withdraw_liquidity.balance,
                 usdc_balance_before_swap.balance - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18)
-                    + response_remove_liquidity_by_share_simulation_1000_lp[0].amount
+                    + response_withdraw_liquidity_by_share_simulation_1000_lp[0].amount
                     + Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
             );
 
-            // Query USDT Balance of ADMIN after remove liquidity
-            let usdt_balance_after_remove_liquidity: BalanceResponse = app
+            // Query USDT Balance of ADMIN after withdraw liquidity
+            let usdt_balance_after_withdraw_liquidity: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
                     usdt_token_contract.clone(),
@@ -2501,16 +2501,16 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert USDT Balance of ADMIN after remove liquidity
+            // assert USDT Balance of ADMIN after withdraw liquidity
             assert_eq!(
-                usdt_balance_after_remove_liquidity.balance,
+                usdt_balance_after_withdraw_liquidity.balance,
                 usdt_balance_after_swap.balance
-                    + response_remove_liquidity_by_share_simulation_1000_lp[1].amount
+                    + response_withdraw_liquidity_by_share_simulation_1000_lp[1].amount
                     + Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
             );
 
-            // Query BUSD Balance of ADMIN after remove liquidity
-            let busd_balance_after_remove_liquidity: BalanceResponse = app
+            // Query BUSD Balance of ADMIN after withdraw liquidity
+            let busd_balance_after_withdraw_liquidity: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
                     busd_token_contract.clone(),
@@ -2520,15 +2520,15 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert BUSD Balance of ADMIN after remove liquidity
+            // assert BUSD Balance of ADMIN after withdraw liquidity
             assert_eq!(
-                busd_balance_after_remove_liquidity.balance,
+                busd_balance_after_withdraw_liquidity.balance,
                 busd_balance_before_swap.balance
-                    + response_remove_liquidity_by_share_simulation_1000_lp[2].amount
+                    + response_withdraw_liquidity_by_share_simulation_1000_lp[2].amount
                     + Uint128::from(200u128 * ONE_UNIT_OF_DECIMAL_18),
             );
 
-            // Query LP token balance of ADMIN after remove liquidity
+            // Query LP token balance of ADMIN after withdraw liquidity
             let lp_token_balance: BalanceResponse = app
                 .wrap()
                 .query_wasm_smart(
@@ -2539,11 +2539,11 @@ mod tests {
                 )
                 .unwrap();
 
-            // assert LP token balance of ADMIN after remove liquidity
+            // assert LP token balance of ADMIN after withdraw liquidity
             assert_eq!(
                 lp_token_balance.balance,
                 Uint128::from(response_provide_500_000_usd)
-                    - response_remove_liquidity_by_token_simulation_100_usd_200_usdt_200_busd
+                    - response_withdraw_liquidity_by_token_simulation_100_usd_200_usdt_200_busd
                     - Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_6)
             );
         }

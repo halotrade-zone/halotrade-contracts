@@ -37,7 +37,7 @@ pub enum ExecuteMsg {
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
     },
-    RemoveLiquidityByToken {
+    WithdrawLiquidityByToken {
         assets: Vec<Asset>,
         max_burn_share: Option<Uint128>,
     },
@@ -59,7 +59,7 @@ pub enum Cw20StableHookMsg {
         max_spread: Option<Decimal>,
         to: Option<Addr>,
     },
-    RemoveLiquidityByShare {
+    WithdrawLiquidityByShare {
         share: Uint128,
         assets_min_amount: Option<Vec<Uint128>>,
     },
@@ -78,7 +78,7 @@ pub enum QueryMsg {
     #[returns(Uint128)]
     ProvideLiquiditySimulation { assets: Vec<Asset> },
     #[returns(Vec<Asset>)]
-    RemoveLiquidityByShareSimulation { share: Uint128 },
+    WithdrawLiquidityByShareSimulation { share: Uint128 },
     #[returns(Uint128)]
-    RemoveLiquidityByTokenSimulation { assets: Vec<Asset> },
+    WithdrawLiquidityByTokenSimulation { assets: Vec<Asset> },
 }

@@ -126,10 +126,10 @@ pub fn execute(
             slippage_tolerance,
             receiver,
         } => provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
-        ExecuteMsg::RemoveLiquidityByToken {
+        ExecuteMsg::WithdrawLiquidityByToken {
             assets,
             max_burn_share,
-        } => remove_liquidity_by_token(deps, env, info, assets, max_burn_share),
+        } => withdraw_liquidity_by_token(deps, env, info, assets, max_burn_share),
         ExecuteMsg::StableSwap {
             offer_asset,
             ask_asset,
@@ -180,10 +180,10 @@ pub fn receive_cw20(
             max_spread,
             to,
         ),
-        Ok(Cw20StableHookMsg::RemoveLiquidityByShare {
+        Ok(Cw20StableHookMsg::WithdrawLiquidityByShare {
             share,
             assets_min_amount,
-        }) => remove_liquidity_by_share(
+        }) => withdraw_liquidity_by_share(
             deps,
             env,
             info,
@@ -349,7 +349,7 @@ pub fn provide_liquidity(
     ]))
 }
 
-pub fn remove_liquidity_by_share(
+pub fn withdraw_liquidity_by_share(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -430,7 +430,7 @@ pub fn remove_liquidity_by_share(
     }));
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("action", "remove_liquidity_by_share"),
+        ("action", "withdraw_liquidity_by_share"),
         ("sender", info.sender.as_str()),
         ("share", &share.to_string()),
         (
@@ -444,7 +444,7 @@ pub fn remove_liquidity_by_share(
     ]))
 }
 
-pub fn remove_liquidity_by_token(
+pub fn withdraw_liquidity_by_token(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -562,7 +562,7 @@ pub fn remove_liquidity_by_token(
     }));
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("action", "remove_liquidity_by_token"),
+        ("action", "withdraw_liquidity_by_token"),
         ("sender", info.sender.as_str()),
         ("share", &share.to_string()),
         (
@@ -710,11 +710,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::ProvideLiquiditySimulation { assets } => Ok(to_binary(
             &query_provide_liquidity_simulation(deps, env, assets)?,
         )?),
-        QueryMsg::RemoveLiquidityByShareSimulation { share } => Ok(to_binary(
-            &query_remove_liquidity_by_share_simulation(deps, env, share)?,
+        QueryMsg::WithdrawLiquidityByShareSimulation { share } => Ok(to_binary(
+            &query_withdraw_liquidity_by_share_simulation(deps, env, share)?,
         )?),
-        QueryMsg::RemoveLiquidityByTokenSimulation { assets } => Ok(to_binary(
-            &query_remove_liquidity_by_token_simulation(deps, env, assets)?,
+        QueryMsg::WithdrawLiquidityByTokenSimulation { assets } => Ok(to_binary(
+            &query_withdraw_liquidity_by_token_simulation(deps, env, assets)?,
         )?),
     }
 }
@@ -864,7 +864,7 @@ pub fn query_provide_liquidity_simulation(
     Ok(share)
 }
 
-pub fn query_remove_liquidity_by_share_simulation(
+pub fn query_withdraw_liquidity_by_share_simulation(
     deps: Deps,
     env: Env,
     share: Uint128,
@@ -903,10 +903,9 @@ pub fn query_remove_liquidity_by_share_simulation(
             amount: *asset_amount,
         })
         .collect::<Vec<Asset>>())
-
 }
 
-pub fn query_remove_liquidity_by_token_simulation(
+pub fn query_withdraw_liquidity_by_token_simulation(
     deps: Deps,
     env: Env,
     assets: Vec<Asset>,
