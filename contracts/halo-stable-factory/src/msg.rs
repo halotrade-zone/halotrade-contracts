@@ -28,6 +28,10 @@ pub enum ExecuteMsg {
         /// Amplification coefficient for the pair
         amp_factor_info: AmpFactor,
     },
+    AddNativeTokenDecimals {
+        denom: String,
+        decimals: u8,
+    },
 }
 
 #[cw_serde]

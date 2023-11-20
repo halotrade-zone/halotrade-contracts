@@ -73,3 +73,13 @@ fn calc_range_start(start_after: Option<Vec<AssetInfoRaw>>) -> Option<Vec<u8>> {
         v
     })
 }
+
+// key : asset info / value: decimals
+pub const ALLOW_NATIVE_TOKENS: Map<&[u8], u8> = Map::new("allow_native_token");
+pub fn add_allow_native_token(
+    storage: &mut dyn Storage,
+    denom: String,
+    decimals: u8,
+) -> StdResult<()> {
+    ALLOW_NATIVE_TOKENS.save(storage, denom.as_bytes(), &decimals)
+}

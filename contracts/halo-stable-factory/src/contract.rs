@@ -10,16 +10,19 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use halo_stable_pair::math::AmpFactor;
-use halo_stable_pair::msg::InstantiateMsg as StablePairInstantiateMsg;
+use halo_stable_pair::msg::{
+    ExecuteMsg as StablePairExecuteMsg, InstantiateMsg as StablePairInstantiateMsg,
+};
 use halo_stable_pair::state::{
     CreateStablePairRequirements, StablePairInfo, StablePairInfoRaw, StablePairsResponse,
     DEFAULT_COMMISSION_RATE,
 };
 use haloswap::asset::{AssetInfo, AssetInfoRaw, LPTokenInfo};
+use haloswap::querier::query_balance;
 
 use crate::msg::{ConfigResponse, QueryMsg};
 use crate::query::query_stable_pair_info_from_stable_pairs;
-use crate::state::{read_stable_pairs, STABLE_PAIRS};
+use crate::state::{add_allow_native_token, read_stable_pairs, ALLOW_NATIVE_TOKENS, STABLE_PAIRS};
 use crate::{
     msg::{ExecuteMsg, InstantiateMsg},
     state::{pair_key, Config, TmpStablePairInfo, CONFIG, TMP_STABLE_PAIR_INFO},
@@ -68,6 +71,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             lp_token_info,
             amp_factor_info,
         ),
+        ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
+            execute_add_native_token_decimals(deps, env, info, denom, decimals)
+        }
     }
 }
 
@@ -171,6 +177,102 @@ pub fn execute_create_stable_pair(
             }),
             reply_on: ReplyOn::Success,
         }))
+}
+
+pub fn execute_add_native_token_decimals(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    denom: String,
+    decimals: u8,
+) -> StdResult<Response> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let mut res: Response = Response::new();
+    let is_native_exist: bool = ALLOW_NATIVE_TOKENS
+        .may_load(deps.storage, denom.as_bytes())?
+        .is_some();
+
+    // permission check
+    if info.sender != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
+    let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
+    if balance.is_zero() {
+        return Err(StdError::generic_err(
+            "a balance greater than zero is required by the stable factory for verification",
+        ));
+    }
+
+    // Add the native token decimals to the allow list
+    add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
+
+    // Update the native token decimals for the existing pairs
+    let pair_infos = read_stable_pairs(deps.storage, deps.api, None, None)?;
+
+    // If the native token is already exist, then update the decimals for the existing pairs
+    if is_native_exist {
+        // Messages to update the native token decimals for the existing pairs
+        let mut messages: Vec<CosmosMsg> = vec![];
+
+        for pair_info in pair_infos {
+            // Get the pair key from the pair info
+            let pair_key = pair_key(
+                &pair_info
+                    .asset_infos
+                    .iter()
+                    .map(|asset_info| asset_info.to_raw(deps.api).unwrap())
+                    .collect::<Vec<AssetInfoRaw>>(),
+            );
+
+            // Get raw pair info from the pair key
+            let stable_pair_info_raw: StablePairInfoRaw =
+                STABLE_PAIRS.load(deps.storage, &pair_key)?;
+
+            // Loop pair_info to identify the native token
+            for (i, asset_info) in pair_info.asset_infos.iter().enumerate() {
+                // If the asset info is native token, then update the decimals
+                if asset_info.is_native_token()
+                    && pair_info.asset_infos[i]
+                        .query_denom_of_native_token()
+                        .unwrap()
+                        == denom
+                {
+                    // Update the native token decimals
+                    let mut asset_decimals = stable_pair_info_raw.asset_decimals.clone();
+
+                    asset_decimals[i] = decimals;
+
+                    // Update the stable pair info
+                    STABLE_PAIRS.save(
+                        deps.storage,
+                        &pair_key,
+                        &StablePairInfoRaw {
+                            asset_decimals: asset_decimals.clone(),
+                            ..stable_pair_info_raw.clone()
+                        },
+                    )?;
+
+                    // Update the stable pair contract
+                    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr: pair_info.contract_addr.to_string(),
+                        msg: to_binary(&StablePairExecuteMsg::UpdateNativeTokenDecimals {
+                            denom: denom.clone(),
+                            asset_decimals,
+                        })?,
+                        funds: vec![],
+                    }));
+                }
+            }
+        }
+        res = res.add_messages(messages);
+    }
+
+    Ok(res.add_attributes(vec![
+        ("action", "add_allow_native_token"),
+        ("denom", &denom),
+        ("decimals", &decimals.to_string()),
+    ]))
 }
 
 /// This just stores the result for future query

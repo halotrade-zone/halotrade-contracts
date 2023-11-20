@@ -1,3 +1,5 @@
+use std::vec;
+
 use bignumber::Decimal256;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -153,6 +155,10 @@ pub fn execute(
                 to,
             )
         }
+        ExecuteMsg::UpdateNativeTokenDecimals {
+            denom,
+            asset_decimals,
+        } => update_native_token_decimals(deps, env, info, denom, asset_decimals),
     }
 }
 
@@ -691,6 +697,52 @@ pub fn stable_swap(
         ("offer_asset", &offer_asset.to_string()),
         ("ask_asset", &ask_asset.to_string()),
         ("return_amount", &return_amount.to_string()),
+    ]))
+}
+
+pub fn update_native_token_decimals(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    denom: String,
+    asset_decimals: Vec<u8>,
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // permission check
+    if info.sender.as_str() != config.halo_stable_factory {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut stable_pair_info_raw: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
+    let mut asset_infos = stable_pair_info_raw.asset_infos;
+
+    for asset_info in asset_infos.iter_mut() {
+        if let AssetInfoRaw::NativeToken { denom: d, .. } = asset_info {
+            if d == &denom {
+                stable_pair_info_raw.asset_decimals = asset_decimals.clone();
+            }
+        }
+    }
+
+    STABLE_PAIR_INFO.save(
+        deps.storage,
+        &StablePairInfoRaw {
+            asset_infos: asset_infos.clone(),
+            ..stable_pair_info_raw
+        },
+    )?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "update_native_token_decimals"),
+        (
+            "assets",
+            &asset_infos
+                .iter()
+                .map(|asset_info| asset_info.to_normal(deps.api).unwrap().to_string())
+                .collect::<Vec<String>>()
+                .join(","),
+        ),
     ]))
 }
 

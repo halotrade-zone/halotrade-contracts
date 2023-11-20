@@ -48,6 +48,11 @@ pub enum ExecuteMsg {
         max_spread: Option<Decimal>,
         to: Option<Addr>,
     },
+    /// Update native token decimals of the stable pair
+    UpdateNativeTokenDecimals {
+        denom: String,
+        asset_decimals: Vec<u8>,
+    },
 }
 
 #[cw_serde]
