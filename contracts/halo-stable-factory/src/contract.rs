@@ -18,10 +18,11 @@ use halo_stable_pair::state::{
     DEFAULT_COMMISSION_RATE,
 };
 use haloswap::asset::{AssetInfo, AssetInfoRaw, LPTokenInfo};
+use haloswap::factory::NativeTokenDecimalsResponse;
 use haloswap::querier::query_balance;
 
 use crate::msg::{ConfigResponse, QueryMsg};
-use crate::query::query_stable_pair_info_from_stable_pairs;
+use crate::query::{query_decimals, query_stable_pair_info_from_stable_pairs};
 use crate::state::{add_allow_native_token, read_stable_pairs, ALLOW_NATIVE_TOKENS, STABLE_PAIRS};
 use crate::{
     msg::{ExecuteMsg, InstantiateMsg},
@@ -120,7 +121,11 @@ pub fn execute_create_stable_pair(
 
     // Loop and check all asset decimals
     for asset_info in asset_infos.iter() {
-        match asset_info.query_decimals(env.contract.address.clone(), &deps.querier) {
+        match query_decimals(
+            asset_info.clone(),
+            env.contract.address.clone(),
+            &deps.querier,
+        ) {
             Ok(decimal) => {
                 asset_decimals.push(decimal);
                 raw_infos.push(asset_info.to_raw(deps.api)?);
@@ -316,6 +321,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::StablePairs { start_after, limit } => {
             to_binary(&query_stable_pairs(deps, start_after, limit)?)
         }
+        QueryMsg::NativeTokenDecimals { denom } => {
+            to_binary(&query_native_token_decimal(deps, denom)?)
+        }
     }
 }
 
@@ -360,4 +368,12 @@ pub fn query_stable_pairs(
     };
 
     Ok(resp)
+}
+
+pub fn query_native_token_decimal(
+    deps: Deps,
+    denom: String,
+) -> StdResult<NativeTokenDecimalsResponse> {
+    let decimals = ALLOW_NATIVE_TOKENS.load(deps.storage, denom.as_bytes())?;
+    Ok(NativeTokenDecimalsResponse { decimals })
 }

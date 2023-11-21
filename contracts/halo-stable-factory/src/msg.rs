@@ -4,7 +4,10 @@ use halo_stable_pair::{
     math::AmpFactor,
     state::{CreateStablePairRequirements, StablePairInfo, StablePairsResponse},
 };
-use haloswap::asset::{AssetInfo, LPTokenInfo};
+use haloswap::{
+    asset::{AssetInfo, LPTokenInfo},
+    factory::NativeTokenDecimalsResponse,
+};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -46,6 +49,8 @@ pub enum QueryMsg {
         start_after: Option<Vec<AssetInfo>>,
         limit: Option<u32>,
     },
+    #[returns(NativeTokenDecimalsResponse)]
+    NativeTokenDecimals { denom: String },
 }
 
 // We define a custom struct for each query response

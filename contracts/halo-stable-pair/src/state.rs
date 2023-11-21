@@ -38,6 +38,12 @@ pub struct StablePairsResponse {
 }
 
 #[cw_serde]
+pub struct StablePoolResponse {
+    pub assets: Vec<Asset>,
+    pub total_share: Uint128,
+}
+
+#[cw_serde]
 pub struct StablePairInfoRaw {
     pub asset_infos: Vec<AssetInfoRaw>,
     pub contract_addr: Addr,

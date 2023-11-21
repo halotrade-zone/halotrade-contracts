@@ -10,6 +10,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
+use halo_factory::contract;
 use haloswap::{
     asset::{Asset, AssetInfo, AssetInfoRaw, LP_TOKEN_RESERVED_AMOUNT},
     error::ContractError,
@@ -24,7 +25,7 @@ use crate::{
     msg::{Cw20StableHookMsg, ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{
         decrease_decimals, increase_decimals, Config, StablePairInfo, StablePairInfoRaw,
-        AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG, STABLE_PAIR_INFO,
+        StablePoolResponse, AMP_FACTOR_INFO, COMMISSION_RATE_INFO, CONFIG, STABLE_PAIR_INFO,
     },
 };
 
@@ -750,6 +751,7 @@ pub fn update_native_token_decimals(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::StablePair {} => Ok(to_binary(&query_stable_pair(deps)?)?),
+        QueryMsg::StablePool {} => Ok(to_binary(&query_stable_pool(deps)?)?),
         QueryMsg::StableSimulation {
             offer_asset,
             ask_asset,
@@ -775,6 +777,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfo> {
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     stable_pair_info.to_normal(deps.api)
+}
+
+/// Query stable pool info
+pub fn query_stable_pool(deps: Deps) -> Result<StablePoolResponse, ContractError> {
+    let pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
+    let contract_addr = pair_info.contract_addr.clone();
+    let assets: Vec<Asset> = pair_info.query_pairs(&deps.querier, deps.api, contract_addr)?;
+    let total_share = query_token_info(&deps.querier, pair_info.liquidity_token)?.total_supply;
+
+    Ok(StablePoolResponse {
+        assets,
+        total_share,
+    })
 }
 
 pub fn query_stable_simulation(

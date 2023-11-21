@@ -9,7 +9,7 @@ use haloswap::{
 
 use crate::{
     math::AmpFactor,
-    state::{CreateStablePairRequirements, StablePairInfo},
+    state::{CreateStablePairRequirements, StablePairInfo, StablePoolResponse},
 };
 
 #[cw_serde]
@@ -75,6 +75,8 @@ pub enum Cw20StableHookMsg {
 pub enum QueryMsg {
     #[returns(StablePairInfo)]
     StablePair {},
+    #[returns(StablePoolResponse)]
+    StablePool {},
     #[returns(SimulationResponse)]
     StableSimulation {
         offer_asset: Asset,
