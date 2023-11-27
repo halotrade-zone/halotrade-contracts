@@ -925,7 +925,7 @@ mod tests {
             // Execute provide liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(create_stable_pair_response.contract_addr.to_string()),
+                Addr::unchecked(create_stable_pair_response.contract_addr),
                 &provide_liquidity_msg,
                 &[Coin {
                     amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_6),
