@@ -39,7 +39,7 @@ pub fn query_decimals(
 ) -> StdResult<u8> {
     match asset_info {
         AssetInfo::NativeToken { denom } => {
-            query_stable_native_decimals(querier, account_addr, denom.to_string())
+            query_stable_native_decimals(querier, account_addr, denom)
         }
         AssetInfo::Token { contract_addr } => {
             let token_info = query_token_info(querier, Addr::unchecked(contract_addr))?;
