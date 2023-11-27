@@ -2633,12 +2633,10 @@ mod tests {
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked(stable_factory_contract.clone()),
                 &add_native_token_denom_msg,
-                &[
-                    Coin {
-                        amount: Uint128::from(MOCK_TRANSACTION_FEE),
-                        denom: NATIVE_DENOM.to_string(),
-                    },
-                ],
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
             );
 
             assert!(response.is_ok());
@@ -2843,12 +2841,10 @@ mod tests {
                 Addr::unchecked(ADMIN.to_string()),
                 Addr::unchecked(stable_factory_contract.clone()),
                 &add_native_token_denom_msg,
-                &[
-                    Coin {
-                        amount: Uint128::from(MOCK_TRANSACTION_FEE),
-                        denom: NATIVE_DENOM.to_string(),
-                    },
-                ],
+                &[Coin {
+                    amount: Uint128::from(MOCK_TRANSACTION_FEE),
+                    denom: NATIVE_DENOM.to_string(),
+                }],
             );
 
             assert!(response.is_ok());
@@ -2944,8 +2940,6 @@ mod tests {
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                 }
             );
-
-
         }
     }
 }
