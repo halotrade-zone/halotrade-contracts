@@ -339,8 +339,11 @@ fn simulate_swap_operations(
                 ask_asset_info,
                 asset_infos,
             } => {
-                let stable_pair_info: StablePairInfo =
-                    query_stable_pair_info(&deps.querier, halo_stable_factory.clone(), &asset_infos)?;
+                let stable_pair_info: StablePairInfo = query_stable_pair_info(
+                    &deps.querier,
+                    halo_stable_factory.clone(),
+                    &asset_infos,
+                )?;
 
                 let res: SimulationResponse = stable_simulate(
                     &deps.querier,

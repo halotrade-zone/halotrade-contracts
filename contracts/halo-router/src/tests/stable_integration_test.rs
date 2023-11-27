@@ -29,7 +29,10 @@ mod tests {
             asset::{Asset, LPTokenInfo},
             factory::NativeTokenDecimalsResponse,
             pair::ExecuteMsg,
-            router::{ExecuteMsg as RouterExecuteMsg, SwapOperation, QueryMsg as RouterQueryMsg, SimulateSwapOperationsResponse},
+            router::{
+                ExecuteMsg as RouterExecuteMsg, QueryMsg as RouterQueryMsg,
+                SimulateSwapOperationsResponse, SwapOperation,
+            },
         };
         use std::str::FromStr;
 
@@ -1180,7 +1183,6 @@ mod tests {
                     amount: Uint128::from(188_344_521u128),
                 }
             );
-
 
             // Swap 100 NATIVE_DENOM_2 to NATIVE_DENOM via router with operation HaloStableSwap(NATIVE_DENOM_2 -> USDT) and HaloSwap(USDT -> NATIVE_DENOM)
             let swap_msg = RouterExecuteMsg::ExecuteSwapOperations {
