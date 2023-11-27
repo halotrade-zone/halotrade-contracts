@@ -29,7 +29,7 @@ mod tests {
             asset::{Asset, LPTokenInfo},
             factory::NativeTokenDecimalsResponse,
             pair::ExecuteMsg,
-            router::{ExecuteMsg as RouterExecuteMsg, SwapOperation},
+            router::{ExecuteMsg as RouterExecuteMsg, SwapOperation, QueryMsg as RouterQueryMsg, SimulateSwapOperationsResponse},
         };
         use std::str::FromStr;
 
@@ -637,7 +637,8 @@ mod tests {
         // Provide liquidity to the stable pool (10000 NATIVE_DENOM_2, 20000 USDT, 30000 BUSD)
         // Create a pool NATIVE_DENOM, USDT
         // Provide liquidity to the classic pool (10000 NATIVE_DENOM, 5000 USDT)
-        // ADMIN swap 100 NATIVE_DENOM_2 from Stable Pool to NATIVE_DENOM in Classic Pool
+        // ADMIN queries simulation swap 100 NATIVE_DENOM_2 from Stable Pool to NATIVE_DENOM in Classic Pool
+        // ADMIN swaps 100 NATIVE_DENOM_2 from Stable Pool to NATIVE_DENOM in Classic Pool
         // -> ADMIN should get approximately 50 NATIVE_DENOM
         #[test]
         fn test_swap_native_stable_pair() {
@@ -1106,13 +1107,80 @@ mod tests {
             });
 
             let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
-            let denom_2_balance_before_swap: BankBalanceResponse = from_binary(&res).unwrap();
+            let native_denom_balance_before_swap: BankBalanceResponse = from_binary(&res).unwrap();
 
             // Assert balance of ADMIN in NATIVE_DENOM before swap
             assert_eq!(
-                denom_2_balance_before_swap.amount.amount,
+                native_denom_balance_before_swap.amount.amount,
                 Uint128::from(989999990000u128),
             );
+
+            // query balance of ADMIN in NATIVE_DENOM_2 before swap
+            let req: QueryRequest<BankQuery> = QueryRequest::Bank(BankQuery::Balance {
+                address: ADMIN.to_string(),
+                denom: NATIVE_DENOM_2.to_string(),
+            });
+
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let native_denom_2_balance_before_swap: BankBalanceResponse =
+                from_binary(&res).unwrap();
+
+            // Assert balance of ADMIN in NATIVE_DENOM_2 before swap
+            assert_eq!(
+                native_denom_2_balance_before_swap.amount.amount,
+                Uint128::from(489999980000u128),
+            );
+
+            // Query Simulate swap 100 NATIVE_DENOM_2 to NATIVE_DENOM via router with operation HaloStableSwap(NATIVE_DENOM_2 -> USDT) and HaloSwap(USDT -> NATIVE_DENOM)
+            let simulate_swap_msg = RouterQueryMsg::SimulateSwapOperations {
+                operations: vec![
+                    SwapOperation::StableSwap {
+                        offer_asset_info: AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM_2.to_string(),
+                        },
+                        ask_asset_info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        asset_infos: vec![
+                            AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM_2.to_string(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                        ],
+                    },
+                    SwapOperation::HaloSwap {
+                        offer_asset_info: AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        ask_asset_info: AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM.to_string(),
+                        },
+                    },
+                ],
+                offer_amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_6),
+            };
+
+            // Query simulate swap
+            let response: SimulateSwapOperationsResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(router_contract.to_string()),
+                    &simulate_swap_msg,
+                )
+                .unwrap();
+
+            assert_eq!(
+                response,
+                SimulateSwapOperationsResponse {
+                    amount: Uint128::from(188_344_521u128),
+                }
+            );
+
 
             // Swap 100 NATIVE_DENOM_2 to NATIVE_DENOM via router with operation HaloStableSwap(NATIVE_DENOM_2 -> USDT) and HaloSwap(USDT -> NATIVE_DENOM)
             let swap_msg = RouterExecuteMsg::ExecuteSwapOperations {
@@ -1162,12 +1230,37 @@ mod tests {
 
             assert!(response.is_ok());
 
+            // query balance of ADMIN in NATIVE_DENOM_2 after swap
+            let req: QueryRequest<BankQuery> = QueryRequest::Bank(BankQuery::Balance {
+                address: ADMIN.to_string(),
+                denom: NATIVE_DENOM_2.to_string(),
+            });
 
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let native_denom_2_balance_after_swap: BankBalanceResponse = from_binary(&res).unwrap();
 
+            // Assert balance of ADMIN in NATIVE_DENOM_2 after swap
+            assert_eq!(
+                native_denom_2_balance_after_swap.amount.amount,
+                native_denom_2_balance_before_swap.amount.amount
+                    - Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_6)
+                    + Uint128::from(ONE_UNIT_OF_DECIMAL_6), // platform fee back to ADMIN
+            );
 
+            // query balance of ADMIN in NATIVE_DENOM after swap
+            let req: QueryRequest<BankQuery> = QueryRequest::Bank(BankQuery::Balance {
+                address: ADMIN.to_string(),
+                denom: NATIVE_DENOM.to_string(),
+            });
 
+            let res = app.raw_query(&to_binary(&req).unwrap()).unwrap().unwrap();
+            let native_denom_balance_after_swap: BankBalanceResponse = from_binary(&res).unwrap();
 
-
+            // Assert balance of ADMIN in NATIVE_DENOM after swap
+            assert_eq!(
+                native_denom_balance_after_swap.amount.amount,
+                native_denom_balance_before_swap.amount.amount + Uint128::from(188_344_521u128),
+            );
         }
     }
 }

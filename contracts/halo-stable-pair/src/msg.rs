@@ -1,6 +1,6 @@
 use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use haloswap::{
     asset::{Asset, AssetInfo, LPTokenInfo},
@@ -46,7 +46,7 @@ pub enum ExecuteMsg {
         ask_asset: AssetInfo,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
-        to: Option<Addr>,
+        to: Option<String>,
     },
     /// Update native token decimals of the stable pair
     UpdateNativeTokenDecimals {
@@ -62,7 +62,7 @@ pub enum Cw20StableHookMsg {
         ask_asset: AssetInfo,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
-        to: Option<Addr>,
+        to: Option<String>,
     },
     WithdrawLiquidityByShare {
         share: Uint128,

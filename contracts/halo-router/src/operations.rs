@@ -162,7 +162,7 @@ pub fn asset_into_stable_swap_msg(
                 ask_asset: ask_asset_info,
                 belief_price: None,
                 max_spread,
-                to: Some(Addr::unchecked(to.unwrap())),
+                to,
             })?,
         })),
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -176,7 +176,7 @@ pub fn asset_into_stable_swap_msg(
                     ask_asset: ask_asset_info,
                     belief_price: None,
                     max_spread,
-                    to: Some(Addr::unchecked(to.unwrap())),
+                    to,
                 })?,
             })?,
         })),

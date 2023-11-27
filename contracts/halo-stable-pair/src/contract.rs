@@ -10,7 +10,6 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use cw_utils::parse_reply_instantiate_data;
-use halo_factory::contract;
 use haloswap::{
     asset::{Asset, AssetInfo, AssetInfoRaw, LP_TOKEN_RESERVED_AMOUNT},
     error::ContractError,
@@ -593,7 +592,7 @@ pub fn stable_swap(
     ask_asset: AssetInfo,
     _belief_price: Option<Decimal>,
     _max_spread: Option<Decimal>,
-    to: Option<Addr>,
+    to: Option<String>,
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
     // Commission rate OR Fee amount for framework
@@ -684,11 +683,11 @@ pub fn stable_swap(
     //     stable_pair_info.asset_decimals[ask_asset_index],
     // )?;
 
-    let receiver = to.unwrap_or_else(|| sender.clone());
+    let receiver = to.unwrap_or_else(|| sender.to_string().clone());
     let mut messages: Vec<CosmosMsg> = vec![];
     // Send the amount of assets that user will receive to the sender
     if !return_amount.is_zero() {
-        messages.push(return_asset.into_msg(receiver.clone())?);
+        messages.push(return_asset.into_msg(Addr::unchecked(receiver.clone()))?);
     }
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![

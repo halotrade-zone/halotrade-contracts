@@ -293,7 +293,9 @@ fn simulate_swap_operations(
     operations: Vec<SwapOperation>,
 ) -> StdResult<SimulateSwapOperationsResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
+    let stable_config: StableFactoryConfig = STABLE_FACTORY_CONFIG.load(deps.storage)?;
     let halo_factory = deps.api.addr_humanize(&config.halo_factory)?;
+    let halo_stable_factory = deps.api.addr_humanize(&stable_config.halo_stable_factory)?;
 
     let operations_len = operations.len();
     if operations_len == 0 {
@@ -338,7 +340,7 @@ fn simulate_swap_operations(
                 asset_infos,
             } => {
                 let stable_pair_info: StablePairInfo =
-                    query_stable_pair_info(&deps.querier, halo_factory.clone(), &asset_infos)?;
+                    query_stable_pair_info(&deps.querier, halo_stable_factory.clone(), &asset_infos)?;
 
                 let res: SimulationResponse = stable_simulate(
                     &deps.querier,
