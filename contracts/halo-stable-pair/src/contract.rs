@@ -683,7 +683,7 @@ pub fn stable_swap(
     //     stable_pair_info.asset_decimals[ask_asset_index],
     // )?;
 
-    let receiver = to.unwrap_or_else(|| sender.to_string().clone());
+    let receiver = to.unwrap_or_else(|| sender.to_string());
     let mut messages: Vec<CosmosMsg> = vec![];
     // Send the amount of assets that user will receive to the sender
     if !return_amount.is_zero() {
