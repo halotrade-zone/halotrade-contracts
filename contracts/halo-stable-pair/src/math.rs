@@ -17,22 +17,6 @@ pub struct AmpFactor {
 }
 
 impl AmpFactor {
-    pub fn new(
-        initial_amp_factor: Uint128,
-        target_amp_factor: Uint128,
-        current_ts: u64,
-        start_ramp_ts: u64,
-        stop_ramp_ts: u64,
-    ) -> Self {
-        AmpFactor {
-            initial_amp_factor,
-            target_amp_factor,
-            current_ts,
-            start_ramp_ts,
-            stop_ramp_ts,
-        }
-    }
-
     /// Comute the amplification coefficient (A)
     pub fn compute_amp_factor(&self) -> Option<Uint128> {
         if self.current_ts < self.stop_ramp_ts {

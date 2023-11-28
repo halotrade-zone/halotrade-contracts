@@ -136,6 +136,9 @@ pub fn execute_create_stable_pair(
 
     // Get pair key
     let pair_key = pair_key(&raw_infos);
+    if STABLE_PAIRS.may_load(deps.storage, &pair_key)?.is_some() {
+        return Err(StdError::generic_err("stable pair already exists"));
+    }
 
     TMP_STABLE_PAIR_INFO.save(
         deps.storage,

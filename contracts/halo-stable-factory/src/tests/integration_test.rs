@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2};
+    use crate::tests::env_setup::env::{instantiate_contracts, ADMIN, NATIVE_DENOM_2, USER_1};
     // Mock 1_000_000_000 USDC token amount
     const MOCK_1_000_000_000_USDC: u128 = 1_000_000_000_000_000_000_000_000_000u128;
     // Mock 1_000_000_000 USDT token amount
@@ -18,11 +18,12 @@ mod tests {
         use std::str::FromStr;
 
         use crate::msg::{
-            ExecuteMsg as StableFactoryExecuteMsg, QueryMsg as StableFactoryQueryMsg,
+            ConfigResponse, ExecuteMsg as StableFactoryExecuteMsg,
+            QueryMsg as StableFactoryQueryMsg,
         };
         use crate::tests::env_setup::env::NATIVE_DENOM;
         use bignumber::Decimal256;
-        use cosmwasm_std::{to_binary, Addr, Coin, Uint128};
+        use cosmwasm_std::{to_binary, Addr, Coin, StdError, Uint128};
         use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
         use cw_multi_test::Executor;
         use halo_stable_pair::msg::{
@@ -1438,6 +1439,25 @@ mod tests {
                         + 10_000_403_317_233_000_000_000_000u128 // 10_000_000 BUSD received from the stable pair
                 ),
             );
+
+            // Query config info from stable pair factory contract
+            let response: ConfigResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::Config {},
+                )
+                .unwrap();
+
+            // Assert config info
+            assert_eq!(
+                response,
+                ConfigResponse {
+                    owner: ADMIN.to_string(),
+                    stable_pair_code_id: 2u64,
+                    token_code_id: 3u64,
+                }
+            )
         }
 
         // Create a stable swap pair with 3 tokens USDC, USDT, BUSD
@@ -1447,7 +1467,6 @@ mod tests {
         // Query ConfigResponse
         // Query StablePairsResponse
         // Query StablePairInfo for (1 USDC, 1 USDT, 1 BUSD) pair
-
         #[test]
         fn test_query_pairs_msgs() {
             // get integration test app and contracts
@@ -1795,6 +1814,60 @@ mod tests {
                             commission_rate: Decimal256::from_str("0.003").unwrap(),
                         },
                     ],
+                }
+            );
+
+            // query stable pairs with limit 1 and start_after USDC-USDT-HALO pair
+            let response: StablePairsResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked(stable_factory_contract.clone()),
+                    &StableFactoryQueryMsg::StablePairs {
+                        start_after: Some(vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: halo_token_contract.clone(),
+                            },
+                        ]),
+                        limit: Some(1u32),
+                    },
+                )
+                .unwrap();
+
+            // Assert stable pairs
+            assert_eq!(
+                response,
+                StablePairsResponse {
+                    pairs: vec![StablePairInfo {
+                        contract_addr: "contract5".to_string(),
+                        liquidity_token: "contract6".to_string(),
+                        asset_infos: vec![
+                            AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                        ],
+                        asset_decimals: vec![18, 18, 18],
+                        requirements: CreateStablePairRequirements {
+                            whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                            asset_minimum: vec![
+                                Uint128::from(1u128),
+                                Uint128::from(1u128),
+                                Uint128::from(1u128)
+                            ],
+                        },
+                        commission_rate: Decimal256::from_str("0.003").unwrap(),
+                    },],
                 }
             );
         }
@@ -2939,6 +3012,308 @@ mod tests {
                     },
                     commission_rate: Decimal256::from_str("0.003").unwrap(),
                 }
+            );
+        }
+
+        // Test unauthorized error
+        // Test commission rate must be between 0 and 1 (equivalents to 0% to 100%)
+        // Test create same asset pair error
+        // Test create same stable pair error
+        // Test add native token decimals error (unauthorized)
+        // Test add native token decimals error (a balance greater than zero is required by the stable factory for verification)
+        #[test]
+        fn test_create_pair_errors() {
+            // get integration test app and contracts
+            let (mut app, contracts) = instantiate_contracts();
+            // get the stable factory contract
+            let stable_factory_contract = &contracts[0].contract_addr.clone();
+            // get current block time
+            let current_block_time = app.block_info().time.seconds();
+
+            // create stable pair USDC, USDT, BUSD
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: contracts[2].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[3].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[4].contract_addr.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos: asset_infos.clone(),
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(USER_1.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: None,
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[],
+            );
+
+            // Assert error
+            assert_eq!(
+                response.unwrap_err().source().unwrap().to_string(),
+                StdError::generic_err("unauthorized").to_string()
+            );
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: Some(Decimal256::from_str("2").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[],
+            );
+
+            // Assert error
+            assert_eq!(
+                response.unwrap_err().source().unwrap().to_string(),
+                StdError::generic_err(
+                    "commission rate must be between 0 and 1 (equivalents to 0% to 100%)"
+                )
+                .to_string()
+            );
+
+            // Create same asset pair
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: contracts[2].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[2].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[4].contract_addr.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: Some(Decimal256::from_str("0.003").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[],
+            );
+
+            // Assert error
+            assert_eq!(
+                response.unwrap_err().source().unwrap().to_string(),
+                StdError::generic_err("Cannot create with same asset").to_string()
+            );
+
+            // Successful create stable pair
+            let asset_infos = vec![
+                AssetInfo::Token {
+                    contract_addr: contracts[2].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[3].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[4].contract_addr.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: Some(Decimal256::from_str("0.003").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[],
+            );
+
+            assert!(response.is_ok());
+
+            // Test create stable pair with same asset
+            let asset_infos_2 = vec![
+                AssetInfo::Token {
+                    contract_addr: contracts[2].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[3].contract_addr.clone(),
+                },
+                AssetInfo::Token {
+                    contract_addr: contracts[4].contract_addr.clone(),
+                },
+            ];
+
+            // create stable pair msg
+            let create_stable_pair_msg = StableFactoryExecuteMsg::CreateStablePair {
+                asset_infos: asset_infos_2,
+                requirements: CreateStablePairRequirements {
+                    whitelist: vec![Addr::unchecked(ADMIN.to_string())],
+                    asset_minimum: vec![
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                        Uint128::from(1u128),
+                    ],
+                },
+                commission_rate: Some(Decimal256::from_str("0.003").unwrap()),
+                lp_token_info: LPTokenInfo {
+                    lp_token_name: "Stable-LP-Token".to_string(),
+                    lp_token_symbol: "HALO-SLP".to_string(),
+                    lp_token_decimals: None,
+                },
+                amp_factor_info: AmpFactor {
+                    initial_amp_factor: Uint128::from(2000u128),
+                    target_amp_factor: Uint128::from(2000u128),
+                    current_ts: current_block_time,
+                    start_ramp_ts: current_block_time,
+                    stop_ramp_ts: current_block_time + 10,
+                },
+            };
+
+            // Execute create stable pair
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &create_stable_pair_msg,
+                &[],
+            );
+
+            // Assert error
+            assert_eq!(
+                response.unwrap_err().source().unwrap().to_string(),
+                StdError::generic_err("stable pair already exists").to_string()
+            );
+
+            // Test add native token decimals error (unauthorized)
+            let add_native_token_denom_msg = StableFactoryExecuteMsg::AddNativeTokenDecimals {
+                denom: NATIVE_DENOM.to_string(),
+                decimals: 9,
+            };
+
+            // Execute add native token denom
+            let response = app.execute_contract(
+                Addr::unchecked(USER_1.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &add_native_token_denom_msg,
+                &[],
+            );
+
+            // Assert error
+            assert_eq!(
+                response.unwrap_err().source().unwrap().to_string(),
+                StdError::generic_err("unauthorized").to_string()
+            );
+
+            // Test add native token decimals error (a balance greater than zero is required by the stable factory for verification)
+            // Execute add native token denom
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(stable_factory_contract.clone()),
+                &add_native_token_denom_msg,
+                &[],
+            );
+
+            // Assert error
+            assert_eq!(
+                response.unwrap_err().source().unwrap().to_string(),
+                StdError::generic_err("a balance greater than zero is required by the stable factory for verification").to_string()
             );
         }
     }

@@ -25,6 +25,7 @@ pub mod env {
     // You MUST define the constants value here
     // ****************************************
     pub const ADMIN: &str = "aura1uh24g2lc8hvvkaaf7awz25lrh5fptthu2dhq0n";
+    pub const USER_1: &str = "aura1fqj2redmssckrdeekhkcvd2kzp9f4nks4fctrt";
 
     pub const NATIVE_DENOM: &str = "uaura";
     pub const NATIVE_BALANCE: u128 = 1_000_000_000_000u128;
