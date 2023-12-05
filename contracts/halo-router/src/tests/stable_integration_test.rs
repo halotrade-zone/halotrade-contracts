@@ -939,7 +939,7 @@ mod tests {
             let create_stable_pool_response: StablePoolResponse = app
                 .wrap()
                 .query_wasm_smart(
-                    create_stable_pair_response.contract_addr.to_string(),
+                    create_stable_pair_response.contract_addr,
                     &StablePairQueryMsg::StablePool {},
                 )
                 .unwrap();
