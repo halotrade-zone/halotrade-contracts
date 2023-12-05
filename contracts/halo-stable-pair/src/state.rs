@@ -85,8 +85,12 @@ impl StablePairInfoRaw {
         let mut assets: Vec<Asset> = Vec::new();
         for asset_info in info.iter() {
             assets.push(Asset {
-                info: asset_info.clone(),
-                amount: asset_info.query_pool(querier, api, contract_addr.clone())?,
+                info: asset_info.to_owned(),
+                amount: asset_info.query_pool(
+                    querier,
+                    api,
+                    Addr::unchecked(contract_addr.as_ref()),
+                )?,
             });
         }
         Ok(assets)
