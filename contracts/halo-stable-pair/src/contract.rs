@@ -221,7 +221,7 @@ pub fn provide_liquidity(
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // query the information of the stable pair of assets
     let mut pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
     // get the amount of assets that user deposited after checking the assets is same as the assets in stable pair
     let deposits: Vec<Uint128> = pairs
         .iter()
@@ -381,7 +381,7 @@ pub fn withdraw_liquidity_by_share(
 
     // Get the amount of assets in the stable pair
     let mut pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
 
     // Get the amount of assets that user will receive after removing liquidity
     let assets_amount: Vec<Uint128> = pairs
@@ -477,7 +477,7 @@ pub fn withdraw_liquidity_by_token(
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
     let mut pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address.clone())?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
     // Get current total amount of assets in the stable pair
     let old_c_amounts: Vec<Uint128> = pairs
         .iter()
@@ -601,7 +601,7 @@ pub fn stable_swap(
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get index of offer asset
@@ -781,8 +781,9 @@ pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfo> {
 /// Query stable pool info
 pub fn query_stable_pool(deps: Deps) -> Result<StablePoolResponse, ContractError> {
     let pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
-    let contract_addr = pair_info.contract_addr.clone();
-    let assets: Vec<Asset> = pair_info.query_pairs(&deps.querier, deps.api, contract_addr)?;
+    let contract_addr = &pair_info.contract_addr;
+    let assets: Vec<Asset> =
+        pair_info.query_pools(&deps.querier, deps.api, contract_addr.to_owned())?;
     let total_share = query_token_info(&deps.querier, pair_info.liquidity_token)?.total_supply;
 
     Ok(StablePoolResponse {
@@ -803,7 +804,7 @@ pub fn query_stable_simulation(
     let stable_pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     // Get amp factor info
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get index of offer asset
@@ -873,7 +874,7 @@ pub fn query_provide_liquidity_simulation(
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // query the information of the stable pair of assets
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     // get the amount of assets that user deposited after checking the assets is same as the assets in stable pair
     let deposits: Vec<Uint128> = pairs
         .iter()
@@ -947,7 +948,7 @@ pub fn query_withdraw_liquidity_by_share_simulation(
 
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     // Get the amount of assets that user will receive after removing liquidity
     let assets_amount: Vec<Uint128> = pairs
         .iter()
@@ -989,7 +990,7 @@ pub fn query_withdraw_liquidity_by_token_simulation(
     let amp_factor_info: AmpFactor = AMP_FACTOR_INFO.load(deps.storage)?;
     // Get the amount of assets in the stable pair
     let pairs: Vec<Asset> =
-        stable_pair_info.query_pairs(&deps.querier, deps.api, env.contract.address)?;
+        stable_pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     // Get current total amount of assets in the stable pair
     let old_c_amounts: Vec<Uint128> = pairs
         .iter()

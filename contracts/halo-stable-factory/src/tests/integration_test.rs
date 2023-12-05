@@ -29,7 +29,7 @@ mod tests {
         use halo_stable_pair::msg::{
             ExecuteMsg as StablePairExecuteMsg, QueryMsg as StablePairQueryMsg,
         };
-        use halo_stable_pair::state::StablePairsResponse;
+        use halo_stable_pair::state::{StablePairsResponse, StablePoolResponse};
         use halo_stable_pair::{
             math::AmpFactor,
             msg::Cw20StableHookMsg,
@@ -2096,6 +2096,43 @@ mod tests {
 
             assert!(response.is_ok());
 
+            // Query StablePairQueryMsg::StablePool
+            let response: StablePoolResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked("contract5".to_string()),
+                    &StablePairQueryMsg::StablePool {},
+                )
+                .unwrap();
+
+            // assert StablePoolResponse
+            assert_eq!(
+                response,
+                StablePoolResponse {
+                    assets: vec![
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            amount: Uint128::zero(),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            amount: Uint128::zero(),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                            amount: Uint128::zero(),
+                        },
+                    ],
+                    total_share: Uint128::zero(),
+                }
+            );
+
             // ADMIN query ProvideLiquiditySimulation for (100_000 USDC, 200_000 USDT, 200_000 BUSD)
             let provide_liquidity_simulation_msg = StablePairQueryMsg::ProvideLiquiditySimulation {
                 assets: vec![
@@ -2173,6 +2210,43 @@ mod tests {
             );
 
             assert!(response.is_ok());
+
+            // Query StablePairQueryMsg::StablePool
+            let response: StablePoolResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    Addr::unchecked("contract5".to_string()),
+                    &StablePairQueryMsg::StablePool {},
+                )
+                .unwrap();
+
+            // assert StablePoolResponse
+            assert_eq!(
+                response,
+                StablePoolResponse {
+                    assets: vec![
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdc_token_contract.clone(),
+                            },
+                            amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                            amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                    ],
+                    total_share: Uint128::from(499_998_542_621u128),
+                }
+            );
 
             // Query LP token balance of ADMIN
             let lp_token_balance: BalanceResponse = app

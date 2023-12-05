@@ -71,7 +71,7 @@ impl StablePairInfoRaw {
         })
     }
 
-    pub fn query_pairs(
+    pub fn query_pools(
         &self,
         querier: &QuerierWrapper,
         api: &dyn Api,
@@ -84,11 +84,10 @@ impl StablePairInfoRaw {
             .collect::<StdResult<Vec<AssetInfo>>>()?;
         let mut assets: Vec<Asset> = Vec::new();
         for asset_info in info.iter() {
-            let asset = Asset {
+            assets.push(Asset {
                 info: asset_info.clone(),
                 amount: asset_info.query_pool(querier, api, contract_addr.clone())?,
-            };
-            assets.push(asset);
+            });
         }
         Ok(assets)
     }

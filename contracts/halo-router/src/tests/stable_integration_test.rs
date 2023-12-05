@@ -925,7 +925,7 @@ mod tests {
             // Execute provide liquidity
             let response = app.execute_contract(
                 Addr::unchecked(ADMIN.to_string()),
-                Addr::unchecked(create_stable_pair_response.contract_addr),
+                Addr::unchecked(create_stable_pair_response.contract_addr.clone()),
                 &provide_liquidity_msg,
                 &[Coin {
                     amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_6),
@@ -934,6 +934,43 @@ mod tests {
             );
 
             assert!(response.is_ok());
+
+            // query stable pool info
+            let create_stable_pool_response: StablePoolResponse = app
+                .wrap()
+                .query_wasm_smart(
+                    create_stable_pair_response.contract_addr.to_string(),
+                    &StablePairQueryMsg::StablePool {},
+                )
+                .unwrap();
+
+            // Assert stable pool info
+            assert_eq!(
+                create_stable_pool_response,
+                StablePoolResponse {
+                    assets: vec![
+                        Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: NATIVE_DENOM_2.to_string(),
+                            },
+                            amount: Uint128::from(10_000u128 * ONE_UNIT_OF_DECIMAL_6),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: usdt_token_contract.clone(),
+                            },
+                            amount: Uint128::from(20_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                        Asset {
+                            info: AssetInfo::Token {
+                                contract_addr: busd_token_contract.clone(),
+                            },
+                            amount: Uint128::from(30_000u128 * ONE_UNIT_OF_DECIMAL_18),
+                        },
+                    ],
+                    total_share: Uint128::from(59_999_629_659u128),
+                }
+            );
 
             // add native token decimals for Factory Contract
             let add_native_token_decimals_msg = FactoryExecuteMsg::AddNativeTokenDecimals {
