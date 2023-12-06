@@ -2109,25 +2109,10 @@ mod tests {
             assert_eq!(
                 response,
                 StablePoolResponse {
-                    assets: vec![
-                        Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: usdc_token_contract.clone(),
-                            },
-                            amount: Uint128::zero(),
-                        },
-                        Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: usdt_token_contract.clone(),
-                            },
-                            amount: Uint128::zero(),
-                        },
-                        Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: busd_token_contract.clone(),
-                            },
-                            amount: Uint128::zero(),
-                        },
+                    assets_addr: vec![
+                        usdc_token_contract.clone(),
+                        usdt_token_contract.clone(),
+                        busd_token_contract.clone()
                     ],
                     total_share: Uint128::zero(),
                 }
@@ -2224,25 +2209,10 @@ mod tests {
             assert_eq!(
                 response,
                 StablePoolResponse {
-                    assets: vec![
-                        Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: usdc_token_contract.clone(),
-                            },
-                            amount: Uint128::from(100_000u128 * ONE_UNIT_OF_DECIMAL_18),
-                        },
-                        Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: usdt_token_contract.clone(),
-                            },
-                            amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
-                        },
-                        Asset {
-                            info: AssetInfo::Token {
-                                contract_addr: busd_token_contract.clone(),
-                            },
-                            amount: Uint128::from(200_000u128 * ONE_UNIT_OF_DECIMAL_18),
-                        },
+                    assets_addr: vec![
+                        usdc_token_contract.clone(),
+                        usdt_token_contract.clone(),
+                        busd_token_contract.clone()
                     ],
                     total_share: Uint128::from(499_998_542_621u128),
                 }

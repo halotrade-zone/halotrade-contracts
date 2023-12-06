@@ -39,7 +39,7 @@ pub struct StablePairsResponse {
 
 #[cw_serde]
 pub struct StablePoolResponse {
-    pub assets: Vec<Asset>,
+    pub assets_addr: Vec<String>,
     pub total_share: Uint128,
 }
 

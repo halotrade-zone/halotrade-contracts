@@ -781,13 +781,15 @@ pub fn query_stable_pair(deps: Deps) -> StdResult<StablePairInfo> {
 /// Query stable pool info
 pub fn query_stable_pool(deps: Deps) -> Result<StablePoolResponse, ContractError> {
     let pair_info: StablePairInfoRaw = STABLE_PAIR_INFO.load(deps.storage)?;
-    let contract_addr = pair_info.contract_addr.as_ref();
-    let assets: Vec<Asset> =
-        pair_info.query_pools(&deps.querier, deps.api, Addr::unchecked(contract_addr))?;
+    let assets_address: Vec<String> = pair_info
+        .asset_infos
+        .iter()
+        .map(|asset_info| asset_info.to_normal(deps.api).unwrap().to_string())
+        .collect::<Vec<String>>();
     let total_share = query_token_info(&deps.querier, pair_info.liquidity_token)?.total_supply;
 
     Ok(StablePoolResponse {
-        assets,
+        assets_addr: assets_address,
         total_share,
     })
 }
