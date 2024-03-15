@@ -59,6 +59,8 @@ mod tests {
         // Provide liquidity to the pool (10000 NATIVE, 5000 USDC)
         // ADMIN swap 100 NATIVE to USDT
         // -> ADMIN should get approximately 50 USDT
+        // ADMIN swap 100 USDT to BUSD
+        // -> ADMIN should get approximately 100 BUSD
         #[test]
         fn test_swap_cw20_stable_pair() {
             // get integration test app and contracts
@@ -653,6 +655,8 @@ mod tests {
             let stable_factory_contract = &contracts[1].contract_addr.clone();
             // ger router contract
             let router_contract = &contracts[2].contract_addr.clone();
+            // get the USDC contract
+            let usdc_token_contract = &contracts[4].contract_addr.clone();
             // get the USDT contract
             let usdt_token_contract = &contracts[5].contract_addr.clone();
             // get the BUSD contract
@@ -1270,6 +1274,51 @@ mod tests {
                 native_denom_balance_after_swap.amount.amount,
                 native_denom_balance_before_swap.amount.amount + Uint128::from(188_344_521u128),
             );
+
+            // swap 100 USDT to BUSD
+            let swap_msg = RouterExecuteMsg::ExecuteSwapOperations {
+                operations: vec![SwapOperation::StableSwap {
+                    offer_asset_info: AssetInfo::Token {
+                        contract_addr: usdt_token_contract.clone(),
+                    },
+                    ask_asset_info: AssetInfo::Token {
+                        contract_addr: busd_token_contract.clone(),
+                    },
+                    asset_infos: vec![
+                        AssetInfo::NativeToken {
+                            denom: NATIVE_DENOM_2.to_string(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: usdt_token_contract.clone(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: busd_token_contract.clone(),
+                        },
+                    ],
+                }],
+                minimum_receive: None,
+                to: None,
+            };
+
+            // Send 100 USDT to router contract
+            let send_msg = Cw20ExecuteMsg::Send {
+                contract: router_contract.to_string(),
+                amount: Uint128::from(100u128 * ONE_UNIT_OF_DECIMAL_18),
+                msg: to_binary(&swap_msg).unwrap(),
+            };
+
+            // Execute send
+            let response = app.execute_contract(
+                Addr::unchecked(ADMIN.to_string()),
+                Addr::unchecked(usdt_token_contract.clone()),
+                &send_msg,
+                &[],
+            );
+
+            println!("{:?}", response);
+            assert!(response.is_ok());
+
+
         }
     }
 }
