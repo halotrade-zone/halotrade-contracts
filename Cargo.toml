@@ -6,7 +6,7 @@ members = [
 
 [workspace.package]
 authors       = ["Aura network"]
-version       = "1.0.0"
+version       = "1.1.0"
 edition       = "2021"
 license       = "MIT"
 repository    = "https://github.com/halotrade-zone/halotrade-contracts"
@@ -21,26 +21,28 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [workspace.dependencies]
-bignumber         = { path = "./packages/bignumber", default-features = false, version = "1.0.0" }
-haloswap          = { path = "./packages/haloswap", default-features = false, version = "1.0.0" }
-halo-factory      = { path = "./contracts/halo-factory" }
-halo-pair         = { path = "./contracts/halo-pair" }
-halo-router       = { path = "./contracts/halo-router" }
-bigint            = "4.4.3"
-cosmwasm-schema   = "1.1.8"
-cosmwasm-std      = "1.1.8"
-cosmwasm-storage  = "1.1.8"
-cw-multi-test     = "0.16.1"
-cw-storage-plus   = "1.0.0"
-cw-utils          = "1.0.0"
-cw2               = "1.0.0"
-cw20              = { version = "1.0.0" }
-cw20-base         = {version = "1.0.0", features = ["library"]}
-getrandom         = {version = "0.2.8", default-features = false, features = ["js"]}
-integer-sqrt      = "0.1.5"
-thiserror         = { version = "1.0.37" }
-schemars          = "0.8.11"
-serde             = { version = "1.0.137", default-features = false, features = ["derive"] }
+bignumber           = { path = "./packages/bignumber", default-features = false, version = "1.0.0" }
+haloswap            = { path = "./packages/haloswap", default-features = false, version = "1.0.0" }
+halo-factory        = { path = "./contracts/halo-factory", features = ["library"] }
+halo-stable-factory = { path = "./contracts/halo-stable-factory", features = ["library"] }
+halo-pair           = { path = "./contracts/halo-pair", features = ["library"] }
+halo-router         = { path = "./contracts/halo-router", features = ["library"] }
+halo-stable-pair    = { path = "./contracts/halo-stable-pair", features = ["library"] }
+bigint              = "4.4.3"
+cosmwasm-schema     = "1.1.8"
+cosmwasm-std        = "1.1.8"
+cosmwasm-storage    = "1.1.8"
+cw-multi-test       = "0.16.1"
+cw-storage-plus     = "1.0.0"
+cw-utils            = "1.0.0"
+cw2                 = "1.0.0"
+cw20                = { version = "1.0.0" }
+cw20-base           = {version = "1.0.0", features = ["library"]}
+getrandom           = {version = "0.2.8", default-features = false, features = ["js"]}
+integer-sqrt        = "0.1.5"
+thiserror           = { version = "1.0.37" }
+schemars            = "0.8.11"
+serde               = { version = "1.0.137", default-features = false, features = ["derive"] }
 
 [workspace.dev-dependencies]
 cw-multi-test     = "0.16.1"
@@ -56,6 +58,14 @@ codegen-units = 1
 incremental = false
 
 [profile.release.package.halo-router]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.halo-stable-factory]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.halo-stable-pair]
 codegen-units = 1
 incremental = false
 

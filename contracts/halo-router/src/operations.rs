@@ -2,8 +2,11 @@ use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
     StdResult, WasmMsg,
 };
+use halo_stable_factory::query::query_stable_pair_info;
+use halo_stable_pair::msg::ExecuteMsg as StablePairExecuteMsg;
+use halo_stable_pair::state::StablePairInfo;
 
-use crate::state::{Config, CONFIG};
+use crate::state::{Config, StableFactoryConfig, CONFIG, STABLE_FACTORY_CONFIG};
 
 use cw20::Cw20ExecuteMsg;
 use haloswap::asset::{Asset, AssetInfo, PairInfo};
@@ -23,7 +26,6 @@ pub fn execute_swap_operation(
     if env.contract.address != info.sender {
         return Err(StdError::generic_err("unauthorized"));
     }
-
     let messages: Vec<CosmosMsg> = match operation {
         SwapOperation::HaloSwap {
             offer_asset_info,
@@ -56,6 +58,43 @@ pub fn execute_swap_operation(
                 deps.as_ref(),
                 Addr::unchecked(pair_info.contract_addr),
                 offer_asset,
+                None,
+                to,
+            )?]
+        }
+        SwapOperation::StableSwap {
+            offer_asset_info,
+            ask_asset_info,
+            asset_infos,
+        } => {
+            // Get stable pool factory address
+            let config: StableFactoryConfig = STABLE_FACTORY_CONFIG.load(deps.as_ref().storage)?;
+            let stable_factory = deps.api.addr_humanize(&config.halo_stable_factory)?;
+
+            let stable_pair_info: StablePairInfo =
+                query_stable_pair_info(&deps.querier, stable_factory, &asset_infos)?;
+
+            let amount = match offer_asset_info.clone() {
+                AssetInfo::NativeToken { denom } => {
+                    query_balance(&deps.querier, env.contract.address, denom)?
+                }
+                AssetInfo::Token { contract_addr } => query_token_balance(
+                    &deps.querier,
+                    deps.api.addr_validate(contract_addr.as_str())?,
+                    env.contract.address,
+                )?,
+            };
+
+            let offer_asset: Asset = Asset {
+                info: offer_asset_info,
+                amount,
+            };
+
+            vec![asset_into_stable_swap_msg(
+                deps.as_ref(),
+                Addr::unchecked(stable_pair_info.contract_addr),
+                offer_asset,
+                ask_asset_info,
                 None,
                 to,
             )?]
@@ -94,6 +133,47 @@ pub fn asset_into_swap_msg(
                 amount: offer_asset.amount,
                 msg: to_binary(&PairHookMsg::Swap {
                     offer_asset,
+                    belief_price: None,
+                    max_spread,
+                    to,
+                })?,
+            })?,
+        })),
+    }
+}
+
+pub fn asset_into_stable_swap_msg(
+    _deps: Deps,
+    stable_pair_contract: Addr,
+    offer_asset: Asset,
+    ask_asset_info: AssetInfo,
+    max_spread: Option<Decimal>,
+    to: Option<String>,
+) -> StdResult<CosmosMsg> {
+    match offer_asset.info.clone() {
+        AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: stable_pair_contract.to_string(),
+            funds: vec![Coin {
+                denom,
+                amount: offer_asset.amount,
+            }],
+            msg: to_binary(&StablePairExecuteMsg::StableSwap {
+                offer_asset,
+                ask_asset: ask_asset_info,
+                belief_price: None,
+                max_spread,
+                to,
+            })?,
+        })),
+        AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr,
+            funds: vec![],
+            msg: to_binary(&Cw20ExecuteMsg::Send {
+                contract: stable_pair_contract.to_string(),
+                amount: offer_asset.amount,
+                msg: to_binary(&StablePairExecuteMsg::StableSwap {
+                    offer_asset,
+                    ask_asset: ask_asset_info,
                     belief_price: None,
                     max_spread,
                     to,

@@ -1,5 +1,5 @@
 [package]
-name = "halo-router"
+name          = "halo-stable-pair"
 authors       = { workspace = true }
 version       = { workspace = true }
 edition       = { workspace = true }
@@ -23,24 +23,22 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-haloswap            = { workspace = true }
 bignumber           = { workspace = true }
+haloswap            = { workspace = true }
 halo-factory        = { workspace = true }
-halo-stable-factory = { workspace = true }
 halo-pair           = { workspace = true }
-halo-stable-pair    = { workspace = true }
-cosmwasm-schema     = { workspace = true }
-cosmwasm-std        = { workspace = true }
-cosmwasm-storage    = { workspace = true }
+cw-utils            = { workspace = true }
 cw-storage-plus     = { workspace = true }
 cw2                 = { workspace = true }
 cw20                = { workspace = true }
-cw20-base           = { workspace = true }
+cosmwasm-schema     = { workspace = true }
+cosmwasm-std        = { workspace = true }
+cosmwasm-storage    = { workspace = true }
 getrandom           = { workspace = true }
 schemars            = { workspace = true }
 serde               = { workspace = true }
 
 [dev-dependencies]
 cw-multi-test     = { workspace = true }
-cosmwasm-storage  = { workspace = true }
 cosmwasm-schema   = { workspace = true }
+cosmwasm-storage  = { workspace = true }

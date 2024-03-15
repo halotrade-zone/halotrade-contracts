@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "bignumber"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bigint",
  "cosmwasm-schema",
@@ -527,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "halo-factory"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
@@ -546,7 +546,7 @@ dependencies = [
 
 [[package]]
 name = "halo-pair"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
@@ -566,7 +566,7 @@ dependencies = [
 
 [[package]]
 name = "halo-router"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",
@@ -580,6 +580,51 @@ dependencies = [
  "getrandom",
  "halo-factory",
  "halo-pair",
+ "halo-stable-factory",
+ "halo-stable-pair",
+ "haloswap",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "halo-stable-factory"
+version = "1.1.0"
+dependencies = [
+ "bignumber",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.0",
+ "cw-utils 1.0.0",
+ "cw2 1.0.0",
+ "cw20",
+ "cw20-base",
+ "getrandom",
+ "halo-stable-pair",
+ "haloswap",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "halo-stable-pair"
+version = "1.1.0"
+dependencies = [
+ "bignumber",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.0",
+ "cw-utils 1.0.0",
+ "cw2 1.0.0",
+ "cw20",
+ "getrandom",
+ "halo-factory",
+ "halo-pair",
  "haloswap",
  "schemars",
  "serde",
@@ -587,7 +632,7 @@ dependencies = [
 
 [[package]]
 name = "haloswap"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "bignumber",
  "cosmwasm-schema",

@@ -130,6 +130,21 @@ pub fn execute(
             denom,
             asset_decimals,
         } => update_native_token_decimals(deps, env, info, denom, asset_decimals),
+        ExecuteMsg::UpdateCommissionRate { commission_rate } => {
+            let config: Config = CONFIG.load(deps.storage)?;
+
+            // permission check
+            if info.sender.as_str() != config.halo_factory {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            COMMISSION_RATE_INFO.save(deps.storage, &commission_rate)?;
+
+            Ok(Response::new().add_attributes(vec![
+                ("action", "update_commission_rate"),
+                ("commission_rate", &commission_rate.to_string()),
+            ]))
+        }
     }
 }
 
@@ -461,7 +476,7 @@ pub fn swap(
         amount: return_amount,
     };
 
-    // check max spread limit if exist
+    // check max spread limit if exists
     assert_max_spread(
         belief_price,
         max_spread,
@@ -585,7 +600,7 @@ pub fn query_simulation(
     // get pool info of the pair contract
     let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
     // Commission rate OR Fee amount for framework
-    let commission_rate = COMMISSION_RATE_INFO.load(deps.storage)?;
+    let commission_rate: Decimal256 = COMMISSION_RATE_INFO.load(deps.storage)?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;

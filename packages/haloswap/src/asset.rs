@@ -2,10 +2,13 @@ use bignumber::Decimal256;
 use cosmwasm_schema::cw_serde;
 use std::fmt;
 
-use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
+use crate::{
+    error::ContractError,
+    querier::{query_balance, query_native_decimals, query_token_balance, query_token_info},
+};
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, MessageInfo, QuerierWrapper,
-    StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
+    QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -94,6 +97,26 @@ impl Asset {
             },
             amount: self.amount,
         })
+    }
+
+    pub fn assert_asset_info(
+        deps: Deps,
+        asset_infos: &[AssetInfoRaw],
+        pools: &[Asset],
+    ) -> Result<(), ContractError> {
+        for pool in pools.iter() {
+            let mut is_valid = false;
+            for asset_info in asset_infos.iter() {
+                if pool.info == asset_info.to_normal(deps.api)? {
+                    is_valid = true;
+                    break;
+                }
+            }
+            if !is_valid {
+                return Err(ContractError::AssetMismatch {});
+            }
+        }
+        Ok(())
     }
 }
 
@@ -283,6 +306,22 @@ pub struct PairInfo {
     pub asset_decimals: [u8; 2],
     pub requirements: CreatePairRequirements,
     pub commission_rate: Decimal256,
+}
+
+impl PairInfo {
+    pub fn to_raw(&self, api: &dyn Api) -> StdResult<PairInfoRaw> {
+        Ok(PairInfoRaw {
+            asset_infos: [
+                self.asset_infos[0].to_raw(api)?,
+                self.asset_infos[1].to_raw(api)?,
+            ],
+            contract_addr: api.addr_canonicalize(self.contract_addr.as_str())?,
+            liquidity_token: api.addr_canonicalize(self.liquidity_token.as_str())?,
+            asset_decimals: self.asset_decimals,
+            requirements: self.requirements.clone(),
+            commission_rate: self.commission_rate,
+        })
+    }
 }
 
 #[cw_serde]

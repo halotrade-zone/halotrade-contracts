@@ -1,3 +1,4 @@
+use bignumber::Decimal256;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
@@ -7,6 +8,7 @@ use crate::asset::AssetInfo;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub halo_factory: String,
+    pub halo_stable_factory: String,
 }
 
 #[cw_serde]
@@ -15,12 +17,29 @@ pub enum SwapOperation {
         offer_asset_info: AssetInfo,
         ask_asset_info: AssetInfo,
     },
+    StableSwap {
+        offer_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
+        asset_infos: Vec<AssetInfo>,
+    },
 }
 
 impl SwapOperation {
     pub fn get_target_asset_info(&self) -> AssetInfo {
         match self {
             SwapOperation::HaloSwap { ask_asset_info, .. } => ask_asset_info.clone(),
+            SwapOperation::StableSwap { ask_asset_info, .. } => ask_asset_info.clone(),
+        }
+    }
+
+    pub fn get_offer_asset_info(&self) -> AssetInfo {
+        match self {
+            SwapOperation::HaloSwap {
+                offer_asset_info, ..
+            } => offer_asset_info.clone(),
+            SwapOperation::StableSwap {
+                offer_asset_info, ..
+            } => offer_asset_info.clone(),
         }
     }
 }
@@ -49,6 +68,11 @@ pub enum ExecuteMsg {
         minimum_receive: Uint128,
         receiver: String,
     },
+    // Update platform fee
+    UpdatePlatformFee {
+        fee: Decimal256,
+        manager: String,
+    },
 }
 
 #[cw_serde]
@@ -75,6 +99,8 @@ pub enum QueryMsg {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
+    #[returns(Decimal256)]
+    PlatformFee {},
 }
 
 // We define a custom struct for each query response

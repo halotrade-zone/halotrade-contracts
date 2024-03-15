@@ -38,6 +38,11 @@ pub fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
                 offer_asset_info,
                 ask_asset_info,
             } => (offer_asset_info.clone(), ask_asset_info.clone()),
+            SwapOperation::StableSwap {
+                offer_asset_info,
+                ask_asset_info,
+                ..
+            } => (offer_asset_info.clone(), ask_asset_info.clone()),
         };
 
         ask_asset_map.remove(&offer_asset.to_string());
